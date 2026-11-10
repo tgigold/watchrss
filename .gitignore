@@ -1,0 +1,28 @@
+# Lokale Konfiguration mit Zugangsdaten/Geheimnissen
+config.inc.php
+config.local.php
+.env
+.env.*
+
+# Composer (Autoloader wird per "composer install" erzeugt)
+/vendor/
+
+# Laufzeitdaten
+/var/cache/*
+!/var/cache/.gitkeep
+*.lock
+!composer.lock
+*.log
+
+# Datenbank-Dumps
+*.sql
+!/schema.sql
+*.sql.gz
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
