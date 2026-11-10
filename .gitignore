@@ -26,3 +26,6 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Claude Code (lokale Einstellungen)
+.claude/

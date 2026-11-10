@@ -1,0 +1,26 @@
+# watchrss - Apache-Konfiguration
+
+# Verzeichnislisten aus
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bestehende Dateien (CSS/JS) direkt ausliefern ...
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # ... alles andere an den Front-Controller.
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Statische Assets lange cachen (Dateinamen tragen ?v=<mtime>)
+    <FilesMatch "\.(css|js|svg|jpe?g|png|webp|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+</IfModule>
+
+# UTF-8 als Default
+AddDefaultCharset UTF-8
