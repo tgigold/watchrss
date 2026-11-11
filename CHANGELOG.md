@@ -42,6 +42,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Sicherheit
 
+- API-Eingaben werden explizit auf Typ, gültiges UTF-8 und Grenzen geprüft
+  (`Support\Input`). Ein Array statt Text wird mit 422 abgelehnt, statt als
+  „Array“ gespeichert zu werden.
+- 422-Antworten nennen unter `fields` Feldname, erwarteten und erhaltenen
+  Typ – nie den Inhalt.
+- Ungültige Werte für `ttl_minutes`, `max_items` und Einträge der Kanalliste
+  führen zu 422, statt stillschweigend ersetzt oder übersprungen zu werden.
+- Ein Array als `key` im Web-Trigger erzeugt keine PHP-Warnung mehr.
 - `X-Forwarded-For` und `X-Forwarded-Proto` werden nur noch von Proxys aus
   `TRUSTED_PROXIES` übernommen. Bisher konnte jeder Client damit eine
   beliebige IP vortäuschen und die Abrufbremsen umgehen.

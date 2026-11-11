@@ -11,6 +11,7 @@ use WatchRss\Http\Request;
 use WatchRss\Http\Response;
 use WatchRss\Model\Channel;
 use WatchRss\Model\Feed;
+use WatchRss\Support\Input;
 
 /**
  * JSON-Schnittstelle für das Frontend.
@@ -20,8 +21,25 @@ use WatchRss\Model\Feed;
  */
 final class ApiController
 {
+    /** Obergrenze für die Freitext-Eingabe (100 Kanäle mit langer URL). */
+    private const MAX_INPUT_LENGTH = 20000;
+
     public function __construct(private readonly App $app)
     {
+    }
+
+    /**
+     * 422 mit Feldnamen und Typen (nie Inhalten), damit sich falsch
+     * verdrahtete Clients schnell finden lassen.
+     */
+    private function validationError(ValidationException $e): Response
+    {
+        $payload = ['error' => $e->getMessage()];
+        if ($e->fields !== []) {
+            $payload['fields'] = $e->fields;
+        }
+
+        return Response::json($payload, 422);
     }
 
     /**
@@ -30,7 +48,11 @@ final class ApiController
      */
     public function resolve(Request $request): Response
     {
-        $input = (string) $request->input('input', '');
+        try {
+            $input = (string) Input::string($request->body, 'input', '', self::MAX_INPUT_LENGTH);
+        } catch (ValidationException $e) {
+            return $this->validationError($e);
+        }
 
         if (trim($input) === '') {
             return Response::json(['error' => 'Bitte mindestens einen Kanal eingeben.'], 422);
@@ -58,7 +80,9 @@ final class ApiController
     {
         try {
             $feed = $this->app->feedService()->save(null, $request->body);
-        } catch (ValidationException | ResolveException $e) {
+        } catch (ValidationException $e) {
+            return $this->validationError($e);
+        } catch (ResolveException $e) {
             return Response::json(['error' => $e->getMessage()], 422);
         }
 
@@ -77,7 +101,9 @@ final class ApiController
 
         try {
             $feed = $this->app->feedService()->save($feed, $request->body);
-        } catch (ValidationException | ResolveException $e) {
+        } catch (ValidationException $e) {
+            return $this->validationError($e);
+        } catch (ResolveException $e) {
             return Response::json(['error' => $e->getMessage()], 422);
         }
 

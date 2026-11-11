@@ -57,7 +57,8 @@ final class CronController
             );
         }
 
-        $provided = (string) ($params['token'] ?? $request->query['key'] ?? '');
+        $provided = $params['token'] ?? $request->query['key'] ?? '';
+        $provided = is_string($provided) ? $provided : '';
         if (!hash_equals($configured, $provided)) {
             // Bewusst 404 statt 403: ohne gültigen Token existiert der Endpunkt
             // für Fremde schlicht nicht.

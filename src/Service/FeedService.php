@@ -10,6 +10,7 @@ use WatchRss\Model\Feed;
 use WatchRss\Repository\ChannelRepository;
 use WatchRss\Repository\FeedRepository;
 use WatchRss\Repository\VideoRepository;
+use WatchRss\Support\Input;
 
 /**
  * Anwendungsfälle rund um Nutzer-Feeds.
@@ -59,11 +60,13 @@ final class FeedService
      */
     public function save(?Feed $existing, array $payload): Feed
     {
-        $title        = $this->validateTitle($payload['title'] ?? null);
-        $ttlMinutes   = $this->validateTtl($payload['ttl_minutes'] ?? null);
-        $maxItems     = $this->validateMaxItems($payload['max_items'] ?? null);
-        $prefixTitles = (bool) ($payload['prefix_titles'] ?? true);
-        $channels     = $this->validateChannels($payload['channels'] ?? []);
+        // Erst alle Typen prüfen, dann erst Kanäle auflösen (kostet Requests).
+        $title        = $this->validateTitle($payload);
+        $ttlMinutes   = $this->validateTtl($payload);
+        $maxItems     = Input::int($payload, 'max_items', (int) FEED_DEFAULT_MAX_ITEMS, 10, (int) FEED_MAX_ITEMS_LIMIT);
+        $prefixTitles = Input::bool($payload, 'prefix_titles', true);
+        $entries      = $this->validateChannelEntries($payload);
+        $channels     = $this->resolveChannels($entries);
 
         if ($existing === null) {
             return $this->feeds->create($title, $channels, $ttlMinutes, $maxItems, $prefixTitles);
@@ -116,55 +119,86 @@ final class FeedService
      * Validierung
      * ------------------------------------------------------------------ */
 
-    private function validateTitle(mixed $value): string
+    /**
+     * @param array<string,mixed> $payload
+     */
+    private function validateTitle(array $payload): string
     {
-        $title = trim((string) ($value ?? ''));
-        if ($title === '') {
-            return 'watchrss';
-        }
+        $title = trim((string) Input::string($payload, 'title', '', 190));
 
-        return mb_substr($title, 0, 190);
-    }
-
-    /** Nur die im Editor angebotenen Intervalle zulassen. */
-    private function validateTtl(mixed $value): int
-    {
-        $allowed = array_map('intval', explode(',', (string) FEED_TTL_CHOICES));
-        $ttl     = (int) ($value ?? FEED_DEFAULT_TTL_MINUTES);
-
-        return in_array($ttl, $allowed, true) ? $ttl : (int) FEED_DEFAULT_TTL_MINUTES;
-    }
-
-    private function validateMaxItems(mixed $value): int
-    {
-        $items = (int) ($value ?? FEED_DEFAULT_MAX_ITEMS);
-
-        return max(10, min((int) FEED_MAX_ITEMS_LIMIT, $items));
+        return $title === '' ? 'watchrss' : $title;
     }
 
     /**
-     * @param  mixed $value Liste von {channel_id, include_long, include_shorts}
+     * Nur die im Editor angebotenen Intervalle zulassen.
+     *
+     * @param array<string,mixed> $payload
+     */
+    private function validateTtl(array $payload): int
+    {
+        $allowed = array_map('intval', explode(',', (string) FEED_TTL_CHOICES));
+        $ttl     = (int) Input::int($payload, 'ttl_minutes', (int) FEED_DEFAULT_TTL_MINUTES, 1, 10080);
+
+        if (!in_array($ttl, $allowed, true)) {
+            throw ValidationException::field(
+                'ttl_minutes',
+                'integer (' . implode('|', $allowed) . ')',
+                'integer (nicht erlaubt)',
+                'Dieses Abrufintervall wird nicht angeboten.'
+            );
+        }
+
+        return $ttl;
+    }
+
+    /**
+     * Prüft Form und Typen der Kanalliste, ohne etwas aufzulösen.
+     *
+     * @param  array<string,mixed> $payload
+     * @return list<array{channel_id:string,include_long:bool,include_shorts:bool}>
+     * @throws ValidationException
+     */
+    private function validateChannelEntries(array $payload): array
+    {
+        $list = Input::list($payload, 'channels', (int) FEED_MAX_CHANNELS);
+        if ($list === []) {
+            throw new ValidationException('Bitte mindestens einen Kanal auswählen.');
+        }
+
+        $entries = [];
+        foreach ($list as $index => $entry) {
+            $path = "channels[$index]";
+            if (!is_array($entry) || array_is_list($entry)) {
+                throw ValidationException::field($path, 'object', Input::typeOf($entry), 'Ungültiger Eintrag in der Kanalliste.');
+            }
+
+            $channelId = trim((string) Input::string($entry, 'channel_id', '', 200, "$path.channel_id"));
+            if ($channelId === '') {
+                throw ValidationException::field("$path.channel_id", 'string', 'leer', 'Kanal ohne ID in der Auswahl.');
+            }
+
+            $entries[] = [
+                'channel_id'     => $channelId,
+                'include_long'   => Input::bool($entry, 'include_long', true, "$path.include_long"),
+                'include_shorts' => Input::bool($entry, 'include_shorts', true, "$path.include_shorts"),
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  list<array{channel_id:string,include_long:bool,include_shorts:bool}> $entries
      * @return list<array{channel_ref:int,include_long:bool,include_shorts:bool}>
      * @throws ValidationException
      */
-    private function validateChannels(mixed $value): array
+    private function resolveChannels(array $entries): array
     {
-        if (!is_array($value) || $value === []) {
-            throw new ValidationException('Bitte mindestens einen Kanal auswählen.');
-        }
-        if (count($value) > (int) FEED_MAX_CHANNELS) {
-            throw new ValidationException('Maximal ' . FEED_MAX_CHANNELS . ' Kanäle pro Feed.');
-        }
-
         $result = [];
         $seen   = [];
 
-        foreach ($value as $entry) {
-            if (!is_array($entry) || !isset($entry['channel_id'])) {
-                continue;
-            }
-
-            $channelId = trim((string) $entry['channel_id']);
+        foreach ($entries as $entry) {
+            $channelId = $entry['channel_id'];
             if (isset($seen[$channelId])) {
                 continue;
             }
@@ -181,8 +215,8 @@ final class FeedService
             $seen[$channelId] = true;
             $result[]         = [
                 'channel_ref'    => $channel->id,
-                'include_long'   => (bool) ($entry['include_long'] ?? true),
-                'include_shorts' => (bool) ($entry['include_shorts'] ?? true),
+                'include_long'   => $entry['include_long'],
+                'include_shorts' => $entry['include_shorts'],
             ];
         }
 
