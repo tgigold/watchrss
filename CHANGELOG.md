@@ -8,6 +8,16 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-11
+
+**Beim Update beachten:**
+
+- Document-Root beim Hoster von `www/` auf **`public/`** umstellen, danach
+  den alten Ordner `www/` löschen.
+- `APP_BASE_URL` und `ADMIN_TOKEN` in `config.inc.php` eintragen (Vorlage:
+  `config.inc.sample.php`), danach unter `/admin` die Migrationen `0001`
+  und `0002` ausführen.
+
 ### Hinzugefügt
 
 - `config.inc.sample.php` als Vorlage für Zugangsdaten und Geheimnisse.
@@ -143,5 +153,6 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Installation (`bin/install.php`) und zweistufige Migrationen
   (`bin/migrate.php`).
 
-[Unreleased]: https://github.com/tgigold/watchrss/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/tgigold/watchrss/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/tgigold/watchrss/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/tgigold/watchrss/releases/tag/v1.0.0

@@ -49,7 +49,7 @@ final class App
      * Version nach Semantic Versioning. Wird beim Release zusammen mit
      * CHANGELOG.md hochgezählt; Asset-URLs und User-Agents tragen sie.
      */
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.1.0';
 
     /** @var array<string,object> */
     private array $instances = [];
