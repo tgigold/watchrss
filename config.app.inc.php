@@ -179,5 +179,26 @@ defined('TRACKING_SALT') || define('TRACKING_SALT', '');
  */
 defined('ERROR_LOG_FILE') || define('ERROR_LOG_FILE', dirname(__FILE__) . '/var/log/error.log');
 
+/* --------------------------------------------------------------------------
+ * Wartung: Migrationen und Backups
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Geheimnis für die Wartungsseite /admin (Migrationen im Browser).
+ * Gehört in die config.inc.php. Leer = Seite abgeschaltet.
+ * Erzeugen mit: php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
+ */
+defined('ADMIN_TOKEN') || define('ADMIN_TOKEN', '');
+
+/** Fehlversuche je IP, bevor /admin für ADMIN_LOCK_MINUTES gesperrt ist. */
+defined('ADMIN_MAX_FAILURES') || define('ADMIN_MAX_FAILURES', 5);
+defined('ADMIN_LOCK_MINUTES') || define('ADMIN_LOCK_MINUTES', 15);
+
+/** Ziel der automatischen Backups vor Migrationen (per FTP lesbar, Web gesperrt). */
+defined('BACKUP_DIR') || define('BACKUP_DIR', dirname(__FILE__) . '/var/backups');
+
+/** So viele Backups bleiben liegen, ältere werden gelöscht. */
+defined('BACKUP_KEEP') || define('BACKUP_KEEP', 10);
+
 /** Verzeichnis für den Datei-Cache (muss beschreibbar sein). */
 defined('CACHE_DIR') || define('CACHE_DIR', dirname(__FILE__) . '/var/cache');

@@ -11,6 +11,7 @@ config.local.php
 /var/cache/*
 !/var/cache/.gitkeep
 /var/log/
+/var/backups/
 *.lock
 !composer.lock
 *.log

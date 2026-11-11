@@ -20,6 +20,8 @@ defined('TRACKING_SALT') || define('TRACKING_SALT', 'test-salt');
 defined('MATOMO_ENABLED') || define('MATOMO_ENABLED', false);
 defined('TRUSTED_PROXIES') || define('TRUSTED_PROXIES', '10.0.0.0/8');
 defined('ERROR_LOG_FILE') || define('ERROR_LOG_FILE', '');
+defined('ADMIN_TOKEN') || define('ADMIN_TOKEN', 'test-admin-token-0123456789');
+defined('BACKUP_DIR') || define('BACKUP_DIR', sys_get_temp_dir() . '/watchrss-test-backups');
 defined('CACHE_DIR') || define('CACHE_DIR', sys_get_temp_dir() . '/watchrss-test-cache');
 
 require_once dirname(__DIR__) . '/config.app.inc.php';

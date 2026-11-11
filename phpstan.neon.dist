@@ -8,15 +8,21 @@ parameters:
         - tests
         - www/index.php
         - bootstrap.php
+        - migrations
     bootstrapFiles:
         - tests/constants.php
     # Werte aus der Konfiguration sind zur Laufzeit veränderlich - sonst
     # hält PHPStan z. B. "APP_DEBUG ? ..." für immer falsch.
     dynamicConstantNames:
+        - ADMIN_LOCK_MINUTES
+        - ADMIN_MAX_FAILURES
+        - ADMIN_TOKEN
         - APP_BASE_URL
         - APP_DEBUG
         - APP_NAME
         - APP_TIMEZONE
+        - BACKUP_DIR
+        - BACKUP_KEEP
         - CACHE_DIR
         - CHANNEL_REFRESH_SECONDS
         - CRON_MAX_SECONDS

@@ -4,4 +4,5 @@ Disallow: /f/
 Disallow: /e/
 Disallow: /api/
 Disallow: /cron
+Disallow: /admin
 Allow: /$

@@ -36,6 +36,13 @@ define('TRACKING_SALT', '');
  */
 define('APP_BASE_URL', 'https://example.org');
 
+/**
+ * Geheimnis für die Wartungsseite /admin (Migrationen im Browser).
+ * Leer = Seite abgeschaltet.
+ * Erzeugen mit: php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
+ */
+define('ADMIN_TOKEN', '');
+
 /* Optionale Overrides für config.app.inc.php, z. B.: */
 // define('TRUSTED_PROXIES', '10.0.0.0/8');
 // define('MATOMO_ENABLED', true);

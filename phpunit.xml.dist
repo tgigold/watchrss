@@ -16,6 +16,10 @@
         <testsuite name="feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <!-- Nur mit WATCHRSS_TEST_MYSQL_DSN (CI-Container), sonst übersprungen. -->
+        <testsuite name="integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

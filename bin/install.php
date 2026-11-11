@@ -49,23 +49,15 @@ if ($sql === false) {
     exit(1);
 }
 
-// Kommentarzeilen entfernen, dann an Statement-Grenzen zerlegen.
-$sql = preg_replace('/^--.*$/m', '', $sql) ?? $sql;
-
-$statements = array_values(array_filter(
-    array_map('trim', explode(";\n", $sql . "\n")),
-    static fn (string $statement): bool => $statement !== '' && $statement !== ';'
-));
+$statements = WatchRss\Migration\SqlFile::statements($sql);
 
 $pdo = $app->database()->pdo();
+
+// Bestehende Installation? Dann laufen Migrationen nur mit Backup.
+$wasEmpty = $app->database()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN) === [];
 echo 'Datenbank: ', DB_NAME, '@', DB_HOST, ' (', $app->database()->query('SELECT VERSION()')->fetchColumn(), ")\n\n";
 
 foreach ($statements as $statement) {
-    $statement = rtrim($statement, ";\n ");
-    if ($statement === '') {
-        continue;
-    }
-
     preg_match('/CREATE TABLE IF NOT EXISTS `([a-z_]+)`/i', $statement, $m);
     $label = $m[1] ?? substr(preg_replace('/\s+/', ' ', $statement) ?? '', 0, 40);
 
@@ -78,7 +70,19 @@ foreach ($statements as $statement) {
     }
 }
 
-// --- 3. Ergebnis -----------------------------------------------------------
+// --- 3. Migrationen ---------------------------------------------------------
+// schema.sql ist der eingefrorene Ausgangsstand; alles danach kommt über
+// migrations/. Nur bei einer vorher leeren Datenbank ohne Backup.
+echo "\nMigrationen:\n";
+$result = $app->migrator(withBackup: !$wasEmpty)->migrate();
+if ($result['backup'] !== null) {
+    echo "  Backup: {$result['backup']}\n";
+}
+foreach ($result['applied'] as $entry) {
+    printf("  [ok] %04d_%s -> %s\n", $entry['version'], $entry['name'], $entry['result']);
+}
+
+// --- 4. Ergebnis -----------------------------------------------------------
 $tables = $app->database()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 echo "\nTabellen: ", implode(', ', $tables), "\n";
 echo "\nFertig. Nächster Schritt: Cronjob einrichten\n";

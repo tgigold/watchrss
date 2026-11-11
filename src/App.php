@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WatchRss;
 
+use WatchRss\Http\Controller\AdminController;
 use WatchRss\Http\Controller\ApiController;
 use WatchRss\Http\Controller\CronController;
 use WatchRss\Http\Controller\FeedController;
@@ -11,6 +12,8 @@ use WatchRss\Http\Controller\PageController;
 use WatchRss\Http\Request;
 use WatchRss\Http\Response;
 use WatchRss\Http\Router;
+use WatchRss\Migration\Migrator;
+use WatchRss\Migration\SqlDumpBackup;
 use WatchRss\Repository\ChannelRepository;
 use WatchRss\Repository\FeedRepository;
 use WatchRss\Repository\VideoRepository;
@@ -41,8 +44,11 @@ final class App
     /** @var array<string,object> */
     private array $instances = [];
 
-    public function __construct(public readonly string $rootPath)
+    public function __construct(public readonly string $rootPath, ?Database $database = null)
     {
+        if ($database !== null) {
+            $this->instances[Database::class] = $database;
+        }
     }
 
     /* ---------------------------------------------------------------------
@@ -148,6 +154,21 @@ final class App
         ));
     }
 
+    /**
+     * Migrationen aus migrations/. $withBackup = false nur für die
+     * Erstinstallation (leere Datenbank, nichts zu sichern).
+     */
+    public function migrator(bool $withBackup = true): Migrator
+    {
+        $pdo = $this->database()->pdo();
+
+        return new Migrator(
+            $pdo,
+            $this->rootPath . '/migrations',
+            $withBackup ? new SqlDumpBackup($pdo, (string) BACKUP_DIR, (int) BACKUP_KEEP) : null,
+        );
+    }
+
     public function throttle(): FeedThrottle
     {
         return $this->singleton(FeedThrottle::class, fn (): FeedThrottle => FeedThrottle::fromConfig($this->cache()));
@@ -213,6 +234,7 @@ final class App
             $feed   = new FeedController($this);
             $api    = new ApiController($this);
             $cron   = new CronController($this);
+            $admin  = new AdminController($this);
 
             // Oberfläche
             $router->get('#^/$#', $page->home(...));
@@ -223,6 +245,10 @@ final class App
 
             // Web-Trigger für den Abruf (Ersatz für einen Konsolen-Cron)
             $router->get('#^/cron(?:/(?P<token>[A-Za-z0-9._-]{8,128}))?$#', $cron->run(...));
+
+            // Wartung (Migrationen). Token nur im POST-Body, nie in der URL.
+            $router->get('#^/admin/?$#', $admin->show(...));
+            $router->post('#^/admin/?$#', $admin->submit(...));
 
             // JSON-API
             $router->post('#^/api/resolve$#', $api->resolve(...));

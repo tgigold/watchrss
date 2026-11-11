@@ -26,21 +26,43 @@ Eingabe (URL / @handle / Channel-ID)
 ```bash
 cp config.inc.sample.php config.inc.php   # Zugangsdaten eintragen
 composer install          # nur der Autoloader, keine Fremdpakete
-php bin/install.php       # legt die Tabellen an, prüft die Umgebung
+php bin/install.php       # legt die Tabellen an, führt Migrationen aus
 ```
 
 `bin/install.php` ist beliebig oft ausführbar (`CREATE TABLE IF NOT EXISTS`).
+Es spielt `schema.sql` ein und führt danach alle Migrationen aus – auf einer
+bestehenden Datenbank mit vorherigem Backup.
 
-Für **bestehende** Installationen gibt es `bin/migrate.php`. Jeder Schritt
-prüft selbst, ob er schon erledigt ist. Schema-Änderungen, die eine laufende
-Seite betreffen, sind zweistufig angelegt (expand/contract):
+### Migrationen
+
+Schema-Änderungen laufen ausschließlich über nummerierte Migrationen in
+`migrations/` (`0001_name.php`, `0002_name.php`, …). `schema.sql` ist der
+eingefrorene Ausgangsstand und wird nicht mehr geändert. Welche Migrationen
+gelaufen sind, steht in der Tabelle `schema_migrations`.
 
 ```bash
-php bin/migrate.php            # Stufe 1: additiv, alte und neue Codefassung laufen
-#   ... neue Codefassung hochladen ...
-php bin/migrate.php --finish   # Stufe 2: Altlasten entfernen
-php bin/migrate.php --status   # nur anzeigen, nichts ändern
+php bin/migrate.php            # offene Migrationen ausführen (mit Backup)
+php bin/migrate.php --status   # nur anzeigen
 ```
+
+Ohne Shell geht dasselbe im Browser unter **`/admin`**: `ADMIN_TOKEN` aus
+der `config.inc.php` eingeben, Status ansehen, „Migrationen ausführen“.
+
+* **Vor jedem Lauf** mit offenen Migrationen schreibt watchrss automatisch
+  ein Backup nach `var/backups/backup-<Datum>.sql.gz` (die letzten
+  `BACKUP_KEEP` bleiben liegen). Schlägt das Backup fehl, läuft nichts.
+* **Jede Migration läuft in einer eigenen Transaktion.** Ausnahme, die man
+  kennen muss: MySQL beendet Transaktionen bei `ALTER`/`CREATE`/`DROP TABLE`
+  implizit – solche Schritte lassen sich nicht zurückrollen. Dann hilft das
+  Backup (phpMyAdmin → Importieren).
+* Bricht eine Migration ab, bleiben die folgenden unberührt; die Meldung
+  nennt die Migration und das Backup.
+* **Ausgerollte Migrationen werden nie geändert.** Jede Korrektur ist eine
+  neue Migration mit der nächsten Nummer.
+
+Neue Migration anlegen: Datei `migrations/NNNN_beschreibung.php`, die eine
+Instanz von `WatchRss\Migration\Migration` zurückgibt (Vorlage:
+`0001_split_feed_tokens.php`).
 
 ### Webserver
 
@@ -187,8 +209,9 @@ Konfiguration auf dem Server wird einmalig von Hand angelegt.
 Ein Push auf `main` startet den Deploy (siehe oben); im Environment
 `production` muss er freigegeben werden. Geänderte Dateien werden
 überschrieben, nichts wird gelöscht. Was sich geändert hat, steht in
-`CHANGELOG.md`. Bringt ein Update eine Schema-Änderung mit, steht das dort
-ausdrücklich, zusammen mit dem nötigen `bin/migrate.php`-Aufruf.
+`CHANGELOG.md`. Bringt ein Update eine neue Migration mit, steht das dort
+ausdrücklich – nach dem Deploy dann `/admin` aufrufen (oder
+`php bin/migrate.php`) und die offenen Migrationen ausführen.
 
 ### Backup
 
@@ -197,7 +220,7 @@ Zu sichern sind zwei Dinge – alles andere kommt aus dem Repository:
 * **Datenbank** – Dump über das Hoster-Panel (bei all-inkl: KAS →
   Datenbanken → phpMyAdmin → Exportieren) oder per
   `mysqldump --single-transaction <db> > watchrss.sql`. Vor jeder Migration
-  ein Dump ist Pflicht.
+  legt watchrss zusätzlich selbst eines in `var/backups/` an.
 * **`config.inc.php`** – Zugangsdaten und Geheimnisse; liegt nur auf dem
   Server.
 
@@ -241,6 +264,10 @@ Die wichtigsten Werte:
 | `TRACKING_HONOR_DNT` | `true` | Do Not Track / Global Privacy Control respektieren |
 | `TRACKING_SALT` | `''` | Salz für die Besucherkennung (gehört in `config.inc.php`) |
 | `RESOLVE_BUDGET_SECONDS` | `25` | Gesamt-Zeitbudget, um eine Eingabe im Editor aufzulösen |
+| `ADMIN_TOKEN` | `''` | Geheimnis für `/admin` (gehört in `config.inc.php`). Leer = Seite abgeschaltet |
+| `ADMIN_MAX_FAILURES` / `ADMIN_LOCK_MINUTES` | `5` / `15` | Sperre von `/admin` nach Fehlversuchen je IP |
+| `BACKUP_DIR` | `var/backups` | Ziel der automatischen Backups vor Migrationen |
+| `BACKUP_KEEP` | `10` | So viele Backups bleiben liegen |
 | `ERROR_LOG_FILE` | `var/log/error.log` | Fehler-Log der Web-Anwendung (CLI schreibt nach STDERR). Leer = Server-Standard |
 
 ---
@@ -371,9 +398,10 @@ config.inc.php          MySQL-Zugangsdaten          ← außerhalb des Webroots,
 config.inc.sample.php   Vorlage dafür
 config.app.inc.php      Anwendungs-Konfiguration
 bootstrap.php           lädt Config + Autoloader, liefert den Container
-schema.sql              Datenbankschema
+schema.sql              Datenbankschema (Ausgangsstand, wird nicht mehr geändert)
+migrations/             nummerierte Migrationen (0001_…php)
 bin/install.php         Einrichtung
-bin/migrate.php         Schema-Migrationen (zweistufig, ohne Ausfallzeit)
+bin/migrate.php         Migrationen ausführen (CLI; im Browser: /admin)
 bin/fetch.php           Cronjob
 src/
   App.php               Service-Container + Routing
@@ -411,6 +439,8 @@ Werte und rufen nichts ab.
 | `GET` | `/api/feeds/{edit_token}/preview` | aktuelle Einträge als JSON |
 | `POST` | `/api/feeds/{edit_token}/rotate` | neue öffentliche Adresse erzeugen |
 | `GET` | `/cron/{CRON_TOKEN}` | Abruflauf anstoßen (Ersatz für den Konsolen-Cron) |
+| `GET` | `/admin` | Wartung: Formular für den `ADMIN_TOKEN` |
+| `POST` | `/admin` | Migrationsstatus (`action=status`) oder Migrationen ausführen (`action=migrate`); Token nur im Body |
 
 ---
 

@@ -34,6 +34,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - CI-Workflow: Lint, PHPUnit und PHPStan unter PHP 8.2 und 8.4 bei jedem
   Push und Pull Request. Der Deploy läuft nur nach grüner CI.
 - README-Abschnitt „Lokale Entwicklung“ mit Tests.
+- Migrationssystem: nummerierte Migrationen in `migrations/`, Tabelle
+  `schema_migrations`, eigene Transaktion je Migration, automatisches Backup
+  nach `var/backups/` vor jedem Lauf (`BACKUP_DIR`, `BACKUP_KEEP`).
+- Wartungsseite `/admin` zum Ausführen der Migrationen im Browser,
+  geschützt durch `ADMIN_TOKEN` (nur im POST-Body) und Sperre nach
+  Fehlversuchen.
+- Integrationstests für Migrationen und Backup gegen MySQL 8.4 und
+  MariaDB 11.4 in der CI.
 - README-Abschnitt „Fair Use gegenüber YouTube“, inklusive der bewussten
   Ausnahme beim User-Agent.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
@@ -72,6 +80,10 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   gebaut.
 
 - Composer-Plattform auf PHP 8.2 festgelegt.
+- `bin/migrate.php` nutzt das Migrationssystem; die bisherigen Schritte
+  (Aufteilung von `feeds.token`) sind Migration `0001` und prüfen weiter
+  selbst, ob sie nötig sind. `--finish` entfällt.
+- `bin/install.php` führt nach `schema.sql` die Migrationen aus.
 - Kaputte Einträge im Drossel-Cache gelten als „nichts bekannt“, statt zu
   Typfehlern zu führen.
 - Mehrfach angegebenes `--channel` in `bin/fetch.php` wird ignoriert statt

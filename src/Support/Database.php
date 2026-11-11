@@ -32,6 +32,17 @@ final class Database
     /**
      * Erzeugt eine Instanz aus den Konstanten der config.inc.php.
      */
+    /**
+     * Mit fertiger Verbindung (Tests: SQLite im Speicher).
+     */
+    public static function fromPdo(PDO $pdo): self
+    {
+        $database      = new self('', '', '', '', '');
+        $database->pdo = $pdo;
+
+        return $database;
+    }
+
     public static function fromConfig(): self
     {
         return new self(
