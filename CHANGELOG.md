@@ -25,6 +25,10 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - HTTPS-Redirect auf `APP_BASE_URL` in der App und auf `watchrss.de` in
   `www/.htaccess`.
 - `TRUSTED_PROXIES`: Liste vertrauenswürdiger Reverse-Proxys.
+- Gesamt-Zeitbudget fürs Auflösen von Kanälen (`RESOLVE_BUDGET_SECONDS`,
+  Standard 25 s) und fürs Vorab-Abholen neuer Kanäle (10 s).
+- Fehler-Log der Web-Anwendung in `var/log/error.log` (`ERROR_LOG_FILE`).
+- README-Abschnitt „Betrieb“: Updates, Backup, Logs.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
   (beim Deploy) `vendor/`.
 
@@ -50,6 +54,10 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Ungültige Werte für `ttl_minutes`, `max_items` und Einträge der Kanalliste
   führen zu 422, statt stillschweigend ersetzt oder übersprungen zu werden.
 - Ein Array als `key` im Web-Trigger erzeugt keine PHP-Warnung mehr.
+- Ausgehende Anfragen (YouTube, Matomo) nur noch über HTTPS, auch bei
+  Weiterleitungen; höchstens 3 Weiterleitungen statt 5. `http://`-Links zu
+  YouTube werden auf `https://` hochgestuft, eine `http://`-`MATOMO_URL`
+  schaltet das Tracking ab.
 - `X-Forwarded-For` und `X-Forwarded-Proto` werden nur noch von Proxys aus
   `TRUSTED_PROXIES` übernommen. Bisher konnte jeder Client damit eine
   beliebige IP vortäuschen und die Abrufbremsen umgehen.

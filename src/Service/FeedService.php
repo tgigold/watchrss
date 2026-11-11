@@ -24,6 +24,9 @@ final class FeedService
     /** So viele neue Kanäle werden im Request direkt abgeholt. */
     private const PRIME_LIMIT = 12;
 
+    /** Zeitbudget fürs Vorab-Abholen; der Rest kommt mit dem nächsten Cron. */
+    private const PRIME_BUDGET_SECONDS = 10;
+
     public function __construct(
         private readonly FeedRepository $feeds,
         private readonly ChannelRepository $channels,
@@ -87,9 +90,13 @@ final class FeedService
      */
     public function primeChannels(array $channels): void
     {
-        $primed = 0;
+        $primed   = 0;
+        $deadline = microtime(true) + self::PRIME_BUDGET_SECONDS;
 
         foreach ($channels as $channel) {
+            if (microtime(true) >= $deadline) {
+                break;
+            }
             if ($channel->id === null || $channel->lastSuccessAt !== null) {
                 continue;
             }

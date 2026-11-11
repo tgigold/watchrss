@@ -56,10 +56,14 @@ final class ChannelResolver
         '~youtube\.com/channel/(UC[A-Za-z0-9_-]{22})~',
     ];
 
+    /** Zeitpunkt (microtime), ab dem keine neuen Abrufe mehr starten. */
+    private ?float $deadline = null;
+
     public function __construct(
         private readonly HttpClient $http,
         private readonly ChannelRepository $channels,
         private readonly YouTubeFeedFetcher $feedFetcher,
+        private readonly int $budgetSeconds = 25,
     ) {
     }
 
@@ -74,6 +78,10 @@ final class ChannelResolver
         $channels = [];
         $errors   = [];
         $seen     = [];
+
+        // Gesamt-Zeitbudget für den ganzen Request: Was danach noch offen
+        // ist, wird als Fehler gemeldet und kann erneut geprüft werden.
+        $this->deadline = microtime(true) + max(1, $this->budgetSeconds);
 
         foreach ($inputs as $input) {
             try {
@@ -122,6 +130,10 @@ final class ChannelResolver
         // 3. Kanalseite laden und ID aus dem HTML ziehen.
         $lastError = null;
         foreach ($this->candidateUrls($input) as $url) {
+            if ($this->deadline !== null && microtime(true) >= $this->deadline) {
+                throw new ResolveException('Zeitlimit erreicht - bitte diesen Eintrag erneut prüfen.');
+            }
+
             $response = $this->http->get($url);
 
             if ($response->error !== null) {
@@ -269,7 +281,8 @@ final class ChannelResolver
     {
         // Vollständige URL (ggf. ohne Schema) -> direkt übernehmen
         if (preg_match('~^(?:https?://)?(?:[a-z0-9-]+\.)*youtu(?:be\.com|\.be)/~i', $input) === 1) {
-            $url = str_starts_with($input, 'http') ? $input : 'https://' . ltrim($input, '/');
+            // Ausgehend nur HTTPS: http:// wird hochgestuft.
+            $url = preg_replace('~^(?:https?://)?~i', 'https://', ltrim($input, '/')) ?? '';
 
             return $this->isAllowed($url) ? [$url] : [];
         }

@@ -12,9 +12,14 @@ namespace WatchRss\Support;
  *  - transparente gzip-Dekomprimierung (YouTube-Seiten sind ~1,5 MB)
  *  - Zugriff auf Response-Header für Conditional GET (ETag/Last-Modified)
  *  - kontrollierte Redirects statt allow_url_fopen-Überraschungen
+ *
+ * Es geht ausschließlich über HTTPS - auch Weiterleitungen werden nur auf
+ * https:// verfolgt, und höchstens MAX_REDIRECTS-mal.
  */
 final class HttpClient
 {
+    public const MAX_REDIRECTS = 3;
+
     public function __construct(
         private readonly string $userAgent,
         private readonly int $timeout = 15,
@@ -51,7 +56,7 @@ final class HttpClient
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 5,
+            CURLOPT_MAXREDIRS      => self::MAX_REDIRECTS,
             CURLOPT_TIMEOUT        => $this->timeout,
             CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
             CURLOPT_USERAGENT      => $this->userAgent,
@@ -70,6 +75,8 @@ final class HttpClient
             },
         ]);
 
+        curl_setopt_array($ch, self::httpsOnlyOptions());
+
         $body   = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $final  = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
@@ -83,6 +90,21 @@ final class HttpClient
             $error,
             $final,
         );
+    }
+
+    /**
+     * cURL-Optionen, die Anfrage und Weiterleitungen auf HTTPS beschränken.
+     * PHP 8.3+ kennt die String-Variante, ältere nur die Bitmaske.
+     *
+     * @return array<int,mixed>
+     */
+    public static function httpsOnlyOptions(): array
+    {
+        if (defined('CURLOPT_PROTOCOLS_STR') && defined('CURLOPT_REDIR_PROTOCOLS_STR')) {
+            return [CURLOPT_PROTOCOLS_STR => 'https', CURLOPT_REDIR_PROTOCOLS_STR => 'https'];
+        }
+
+        return [CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS];
     }
 
     /**

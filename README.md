@@ -151,6 +151,37 @@ Konfiguration auf dem Server wird einmalig von Hand angelegt.
 
 ---
 
+## Betrieb
+
+### Updates
+
+Ein Push auf `main` startet den Deploy (siehe oben); im Environment
+`production` muss er freigegeben werden. Geänderte Dateien werden
+überschrieben, nichts wird gelöscht. Was sich geändert hat, steht in
+`CHANGELOG.md`. Bringt ein Update eine Schema-Änderung mit, steht das dort
+ausdrücklich, zusammen mit dem nötigen `bin/migrate.php`-Aufruf.
+
+### Backup
+
+Zu sichern sind zwei Dinge – alles andere kommt aus dem Repository:
+
+* **Datenbank** – Dump über das Hoster-Panel (bei all-inkl: KAS →
+  Datenbanken → phpMyAdmin → Exportieren) oder per
+  `mysqldump --single-transaction <db> > watchrss.sql`. Vor jeder Migration
+  ein Dump ist Pflicht.
+* **`config.inc.php`** – Zugangsdaten und Geheimnisse; liegt nur auf dem
+  Server.
+
+`var/cache/` muss nicht gesichert werden, der Inhalt baut sich selbst neu auf.
+
+### Logs
+
+Fehler der Web-Anwendung landen in `var/log/error.log` (per FTP lesbar, über
+das Web gesperrt). Antworten enthalten in Produktion nie Fehlerdetails.
+`bin/fetch.php` schreibt nach STDERR, sodass Cron-Mails Fehler zeigen.
+
+---
+
 ## Konfiguration
 
 | Datei | Inhalt |
@@ -175,11 +206,13 @@ Die wichtigsten Werte:
 | `FEED_UNKNOWN_LIMIT_PER_HOUR` | `20` | Fehlversuche mit unbekannten Feed-Adressen pro IP |
 | `CRON_TOKEN` | `''` | Geheimnis für den Web-Trigger (gehört in `config.inc.php`). Leer = abgeschaltet |
 | `CRON_MAX_SECONDS` | `45` | Zeitbudget eines Web-Laufs |
-| `MATOMO_ENABLED` | `true` | Schalter für das Tracking |
-| `MATOMO_URL` | – | Endpunkt; ohne Dateinamen wird `/matomo.php` ergänzt |
+| `MATOMO_ENABLED` | `false` | Schalter für das Tracking |
+| `MATOMO_URL` | Beispiel-URL | Endpunkt (nur `https://`); ohne Dateinamen wird `/matomo.php` ergänzt |
 | `MATOMO_SITE_ID` | – | Site-ID in Matomo |
 | `TRACKING_HONOR_DNT` | `true` | Do Not Track / Global Privacy Control respektieren |
 | `TRACKING_SALT` | `''` | Salz für die Besucherkennung (gehört in `config.inc.php`) |
+| `RESOLVE_BUDGET_SECONDS` | `25` | Gesamt-Zeitbudget, um eine Eingabe im Editor aufzulösen |
+| `ERROR_LOG_FILE` | `var/log/error.log` | Fehler-Log der Web-Anwendung (CLI schreibt nach STDERR). Leer = Server-Standard |
 
 ---
 
@@ -420,3 +453,11 @@ PDO mit echten Prepared Statements, `htmlspecialchars` in
 allen Templates (`$this->e()`), XML-Erzeugung über `XMLWriter` statt
 String-Konkatenation, `LIBXML_NONET` beim Parsen (kein XXE), Host-Whitelist
 beim Abrufen fremder URLs und IP-Adressen nur gehasht im Cache.
+
+Ausgehende Anfragen laufen ausschließlich über HTTPS, auch Weiterleitungen
+(höchstens drei). `http://`-Links zu YouTube werden hochgestuft. Das
+Auflösen einer Eingabe hat ein Gesamt-Zeitbudget (`RESOLVE_BUDGET_SECONDS`).
+
+API-Eingaben werden explizit auf Typ, gültiges UTF-8 und Grenzen geprüft
+(`Support\Input`). Fehler kommen als 422 mit `fields`: Feldname, erwarteter
+und erhaltener Typ – nie der Inhalt.

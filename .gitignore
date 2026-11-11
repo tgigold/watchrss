@@ -10,6 +10,7 @@ config.local.php
 # Laufzeitdaten
 /var/cache/*
 !/var/cache/.gitkeep
+/var/log/
 *.lock
 !composer.lock
 *.log

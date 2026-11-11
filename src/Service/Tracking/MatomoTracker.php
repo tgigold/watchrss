@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace WatchRss\Service\Tracking;
 
+use WatchRss\Support\HttpClient;
+
 /**
  * Serverseitiges Tracking über die Matomo HTTP Tracking API.
  *
@@ -39,6 +41,11 @@ final class MatomoTracker implements TrackerInterface
         $on     = !defined('MATOMO_ENABLED') || (bool) MATOMO_ENABLED;
 
         if (!$on || $url === '' || $siteId <= 0 || !function_exists('curl_init')) {
+            return new NullTracker();
+        }
+        if (!str_starts_with(strtolower($url), 'https://')) {
+            error_log('[watchrss] MATOMO_URL muss mit https:// beginnen - Tracking aus.');
+
             return new NullTracker();
         }
 
@@ -124,7 +131,7 @@ final class MatomoTracker implements TrackerInterface
             // was in manchen SAPIs Ärger macht.
             CURLOPT_NOSIGNAL       => true,
             CURLOPT_USERAGENT      => 'watchrss/1.0 (+server-side tracking)',
-        ]);
+        ] + HttpClient::httpsOnlyOptions());
 
         curl_exec($handle);
         $errno = curl_errno($handle);

@@ -90,6 +90,7 @@ jobs:
               -x '(^|/)[.]DS_Store$' \
               -x '^config[.]inc[.]php$' \
               -x '^var/cache/' \
+              -x '^var/log/' \
               -x '^(README|CHANGELOG)[.]md$' \
               -x '^LICENSE$' \
               . \"$FTP_SERVER_DIR\"

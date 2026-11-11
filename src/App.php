@@ -110,7 +110,12 @@ final class App
     {
         return $this->singleton(
             ChannelResolver::class,
-            fn (): ChannelResolver => new ChannelResolver($this->httpClient(), $this->channels(), $this->fetcher())
+            fn (): ChannelResolver => new ChannelResolver(
+                $this->httpClient(),
+                $this->channels(),
+                $this->fetcher(),
+                (int) RESOLVE_BUDGET_SECONDS,
+            )
         );
     }
 

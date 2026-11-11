@@ -34,4 +34,13 @@ error_reporting(E_ALL);
 ini_set('display_errors', APP_DEBUG ? '1' : '0');
 ini_set('log_errors', '1');
 
+// Fehler der Web-Anwendung ins eigene Log im Datenverzeichnis.
+if (PHP_SAPI !== 'cli' && ERROR_LOG_FILE !== '') {
+    $logDir = dirname((string) ERROR_LOG_FILE);
+    if (is_dir($logDir) || @mkdir($logDir, 0775, true)) {
+        ini_set('error_log', (string) ERROR_LOG_FILE);
+    }
+    unset($logDir);
+}
+
 return new WatchRss\App($root);

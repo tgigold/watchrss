@@ -51,6 +51,14 @@ defined('HTTP_USER_AGENT') || define(
 defined('HTTP_TIMEOUT') || define('HTTP_TIMEOUT', 15);
 defined('HTTP_CONNECT_TIMEOUT') || define('HTTP_CONNECT_TIMEOUT', 8);
 
+/**
+ * Gesamt-Zeitbudget (Sekunden), um eine Eingabe im Editor zu Kanälen
+ * aufzulösen. Danach startet kein neuer Abruf mehr; offene Einträge werden
+ * als Fehler gemeldet. Ein laufender Abruf kann bis zu HTTP_TIMEOUT länger
+ * dauern.
+ */
+defined('RESOLVE_BUDGET_SECONDS') || define('RESOLVE_BUDGET_SECONDS', 25);
+
 /* --------------------------------------------------------------------------
  * Abruf der Kanal-Feeds (bin/fetch.php)
  * ----------------------------------------------------------------------- */
@@ -158,6 +166,13 @@ defined('TRACKING_SALT') || define('TRACKING_SALT', '');
 /* --------------------------------------------------------------------------
  * Pfade
  * ----------------------------------------------------------------------- */
+
+/**
+ * Fehler-Log der Web-Anwendung. Liegt im Datenverzeichnis: per FTP lesbar,
+ * über das Web gesperrt (var/.htaccess). CLI-Skripte schreiben weiter nach
+ * STDERR, damit Cron-Mails die Fehler zeigen. Leer = Server-Standard.
+ */
+defined('ERROR_LOG_FILE') || define('ERROR_LOG_FILE', dirname(__FILE__) . '/var/log/error.log');
 
 /** Verzeichnis für den Datei-Cache (muss beschreibbar sein). */
 defined('CACHE_DIR') || define('CACHE_DIR', dirname(__FILE__) . '/var/cache');
