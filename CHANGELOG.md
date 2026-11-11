@@ -14,7 +14,7 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - `.gitignore` für lokale Konfiguration, `vendor/`, Cache, Logs und Dumps.
 - `.htaccess` im Projektstamm und in `www/`, die beim ersten Upload fehlten.
 - Automatisches Deployment per FTPS über GitHub Actions
-  (`.github/workflows/deploy.yml`), Actions auf Commit-SHAs gepinnt.
+  (`.github/workflows/deploy.yml`, lftp), Actions auf Commit-SHAs gepinnt.
 - `composer.lock` eingecheckt.
 - `ext-libxml` und `ext-xmlwriter` als Abhängigkeiten in `composer.json`.
 - Klare Fehlermeldung, wenn `config.inc.php` fehlt.
