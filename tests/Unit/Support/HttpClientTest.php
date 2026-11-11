@@ -16,7 +16,7 @@ final class HttpClientTest extends TestCase
     {
         $options = HttpClient::httpsOnlyOptions();
 
-        if (defined('CURLOPT_PROTOCOLS_STR')) {
+        if (defined('CURLOPT_PROTOCOLS_STR') && defined('CURLOPT_REDIR_PROTOCOLS_STR')) {
             self::assertSame('https', $options[CURLOPT_PROTOCOLS_STR]);
             self::assertSame('https', $options[CURLOPT_REDIR_PROTOCOLS_STR]);
         } else {
