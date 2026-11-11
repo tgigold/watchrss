@@ -19,6 +19,11 @@ Eingabe (URL / @handle / Channel-ID)
    /f/<token>.xml  ──► RSS 2.0 mit ETag, Cache-Control, ttl, 429-Bremse
 ```
 
+Im Editor lassen sich die Bereiche 1–3 (Kanäle eintragen, Kanalliste,
+Einstellungen) über den Pfeil oben rechts einklappen – dann bleiben nur die
+Adressen und die Vorschau. Der Zustand liegt im Cookie `watchrss_collapsed`
+(reine Anzeige-Vorliebe, gilt für alle Feeds in diesem Browser).
+
 ---
 
 ## Installation

@@ -13,6 +13,9 @@ use WatchRss\Http\Response;
  */
 final class PageController
 {
+    /** Cookie für "Bereiche 1-3 im Editor eingeklappt" (siehe app.js). */
+    public const COLLAPSE_COOKIE = 'watchrss_collapsed';
+
     public function __construct(private readonly App $app)
     {
     }
@@ -60,6 +63,8 @@ final class PageController
             'feed'        => $feed,
             // Klartext aus der URL - in der Datenbank steht nur der Hash.
             'editToken'   => $token,
+            // Bereiche 1-3 eingeklappt? Reine Anzeige-Vorliebe, gesetzt per JS.
+            'collapsed'   => ($request->cookies[self::COLLAPSE_COOKIE] ?? null) === '1',
             'preview'     => $this->app->feedService()->preview($feed, 24),
             'ttlChoices'  => $this->ttlChoices(),
             'defaultTtl'  => $feed->ttlMinutes,

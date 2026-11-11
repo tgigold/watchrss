@@ -5,6 +5,7 @@
  * @var WatchRss\View\Renderer  $this
  * @var WatchRss\Model\Feed     $feed
  * @var string                  $editToken   Klartext aus der URL (DB kennt nur den Hash)
+ * @var bool                    $collapsed   Bereiche 1-3 eingeklappt (Cookie)
  * @var array<int,array>        $preview
  * @var array<int,string>       $ttlChoices
  * @var int                     $defaultTtl
@@ -47,6 +48,7 @@ $state = [
     'feedTitle'    => $feed->title,
     'prefixTitles' => $feed->prefixTitles,
     'isEdit'       => true,
+    'isCollapsed'  => $collapsed,
 ]) ?>
 
 <?= $this->partial('preview', ['items' => $preview]) ?>

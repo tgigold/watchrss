@@ -117,3 +117,44 @@ test('Fehler der API werden angezeigt statt verschluckt', async ({ page }) => {
 
     await expect(page.getByText('Bitte mindestens einen Kanal eingeben.')).toBeVisible();
 });
+
+test('Editor: Bereiche 1-3 einklappen und Zustand merken', async ({ page }) => {
+    const problems = watchConsole(page);
+
+    // Feed direkt über die API anlegen (der Kanal liegt in der Test-DB).
+    const created = await page.request.post('/api/feeds', {
+        data: { title: 'Einklapp-Test', channels: [{ channel_id: CHANNEL.channel_id }] },
+    });
+    expect(created.status()).toBe(201);
+    const { edit_url: editUrl } = await created.json();
+
+    // Startseite hat keinen Pfeil - nur der Editor.
+    await page.goto('/');
+    await expect(page.locator('#collapse-btn')).toHaveCount(0);
+
+    await page.goto(editUrl);
+    const toggle = page.locator('#collapse-btn');
+    const steps  = page.locator('#builder-steps');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(steps).toBeVisible();
+
+    // Einklappen: Schritte weg, Adressen und Vorschau bleiben.
+    await toggle.click();
+    await expect(steps).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('#result')).toBeVisible();
+
+    // Nach dem Neuladen weiter eingeklappt - schon im HTML vom Server.
+    const reloaded = await page.reload();
+    expect(await reloaded?.text()).toContain('id="builder-steps" hidden');
+    await expect(steps).toBeHidden();
+
+    // Wieder aufklappen, auch das bleibt.
+    await toggle.click();
+    await expect(steps).toBeVisible();
+    await page.reload();
+    await expect(steps).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    expect(problems).toEqual([]);
+});

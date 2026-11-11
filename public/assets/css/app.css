@@ -215,10 +215,46 @@ h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; margin: 0; }
 /* Der Baukasten ist ein <form>; ohne eigenes Layout würden die Karten darin
    direkt aneinanderstoßen (der scheinbare Abstand käme nur von Rahmen und
    Schatten). Gleiche Rhythmik wie .site-main. */
-.builder {
+.builder,
+.builder__steps {
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+}
+
+/* Editor: Bereiche 1-3 ein-/ausklappen ----------------------------------- */
+
+.builder__steps[hidden] { display: none; }
+
+.builder__toggle {
+    display: flex;
+    justify-content: flex-end;
+    /* Der Pfeil sitzt dicht über der ersten Karte, nicht im vollen Abstand. */
+    margin-bottom: calc(var(--space-2) - var(--space-4));
+}
+
+.collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    cursor: pointer;
+}
+.collapse-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.collapse-toggle:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* Offen: Pfeil nach oben (= einklappen). Zu: Pfeil nach unten. */
+.collapse-toggle__icon { transition: transform 0.15s ease; }
+.collapse-toggle[aria-expanded="false"] .collapse-toggle__icon { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+    .collapse-toggle__icon { transition: none; }
 }
 
 .card {

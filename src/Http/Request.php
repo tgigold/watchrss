@@ -32,6 +32,8 @@ final class Request
         public readonly string $host = 'localhost',
         /** APP_BASE_URL aus der Konfiguration, ohne abschließenden Slash. */
         public readonly string $configuredBaseUrl = '',
+        /** @var array<string,mixed> */
+        public readonly array $cookies = [],
     ) {
     }
 
@@ -85,6 +87,7 @@ final class Request
             secure: self::detectHttps($viaProxy),
             host: (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'),
             configuredBaseUrl: rtrim(defined('APP_BASE_URL') ? (string) APP_BASE_URL : '', '/'),
+            cookies: $_COOKIE,
         );
     }
 

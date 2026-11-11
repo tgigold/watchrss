@@ -54,6 +54,9 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - `App::VERSION`; Asset-URLs und der Matomo-User-Agent tragen die Version.
 - Browser-Tests mit Playwright in der CI (`package.json`,
   `package-lock.json`).
+- Editor: Die Bereiche 1–3 lassen sich über einen Pfeil oben rechts
+  einklappen; der Zustand bleibt per Cookie `watchrss_collapsed` erhalten
+  und wird schon serverseitig gerendert (kein Aufblitzen).
 - README-Abschnitt „Fair Use gegenüber YouTube“, inklusive der bewussten
   Ausnahme beim User-Agent.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und

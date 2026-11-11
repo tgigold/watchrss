@@ -92,14 +92,37 @@ final class MysqlFeedFlowTest extends TestCase
         self::assertSame(404, $this->request('GET', '/f/' . $created['feed_token'])->status);
     }
 
+    public function testCollapseCookieIsRenderedServerSide(): void
+    {
+        $created = $this->json($this->request('POST', '/api/feeds', [
+            'channels' => [['channel_id' => self::CHANNEL]],
+        ]), 201);
+        $path = '/e/' . $created['edit_token'];
+
+        $open = $this->request('GET', $path)->body;
+        self::assertStringContainsString('id="builder-steps">', $open);
+        self::assertStringContainsString('aria-expanded="true"', $open);
+
+        $closed = $this->request('GET', $path, cookies: ['watchrss_collapsed' => '1'])->body;
+        self::assertStringContainsString('id="builder-steps" hidden', $closed);
+        self::assertStringContainsString('aria-expanded="false"', $closed);
+
+        // Unsinnige Werte werden ignoriert.
+        $junk = $this->request('GET', $path, cookies: ['watchrss_collapsed' => ['x']])->body;
+        self::assertStringContainsString('id="builder-steps">', $junk);
+    }
+
     public function testUnknownEditTokenIsNotFound(): void
     {
         self::assertSame(404, $this->request('GET', '/e/' . str_repeat('a', 32))->status);
         self::assertSame(404, $this->request('POST', '/api/feeds/' . str_repeat('a', 32), ['channels' => []])->status);
     }
 
-    /** @param array<string,mixed> $body */
-    private function request(string $method, string $path, array $body = []): Response
+    /**
+     * @param array<string,mixed> $body
+     * @param array<string,mixed> $cookies
+     */
+    private function request(string $method, string $path, array $body = [], array $cookies = []): Response
     {
         return $this->app->handle(new Request(
             method: $method,
@@ -111,6 +134,7 @@ final class MysqlFeedFlowTest extends TestCase
             secure: true,
             host: 'watchrss.de',
             configuredBaseUrl: 'https://watchrss.de',
+            cookies: $cookies,
         ));
     }
 

@@ -429,10 +429,43 @@
     }
 
     /* ---------------------------------------------------------------------
+     * Editor: Bereiche 1-3 ein-/ausklappen
+     *
+     * Der Zustand liegt im Cookie "watchrss_collapsed", damit der Server die
+     * Seite gleich richtig rendert (kein Aufblitzen). Reine Anzeige-Vorliebe,
+     * deshalb ohne HttpOnly - und Secure nur, wo HTTPS läuft.
+     * ------------------------------------------------------------------ */
+
+    const COLLAPSE_COOKIE = 'watchrss_collapsed';
+
+    function initCollapse() {
+        const button = document.getElementById('collapse-btn');
+        const steps  = document.getElementById('builder-steps');
+        if (!button || !steps) { return; }
+
+        button.addEventListener('click', () => {
+            const collapse = !steps.hidden;
+
+            steps.hidden = collapse;
+            button.setAttribute('aria-expanded', collapse ? 'false' : 'true');
+            button.setAttribute('aria-label', collapse
+                ? 'Kanäle und Einstellungen einblenden'
+                : 'Kanäle und Einstellungen ausblenden');
+            button.title = collapse ? 'Einblenden' : 'Ausblenden';
+
+            const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+            document.cookie = COLLAPSE_COOKIE + '=' + (collapse ? '1; Max-Age=31536000' : '; Max-Age=0')
+                + '; Path=/; SameSite=Lax' + secure;
+        });
+    }
+
+    /* ---------------------------------------------------------------------
      * Start
      * ------------------------------------------------------------------ */
 
     document.addEventListener('DOMContentLoaded', () => {
+        initCollapse();
+
         const stateElement = document.getElementById('watchrss-state');
         if (!stateElement || !document.getElementById('builder')) { return; }
 

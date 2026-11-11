@@ -13,9 +13,26 @@
  * @var string                 $feedTitle
  * @var bool                   $prefixTitles
  * @var bool                   $isEdit
+ * @var bool|null              $isCollapsed Bereiche 1-3 eingeklappt (nur Editor)
  */
+$isCollapsed = $isEdit && ($isCollapsed ?? false);
 ?>
 <form class="builder" id="builder" autocomplete="off" novalidate>
+
+    <?php if ($isEdit) : ?>
+        <div class="builder__toggle">
+            <button type="button" class="collapse-toggle" id="collapse-btn"
+                    aria-controls="builder-steps" aria-expanded="<?= $isCollapsed ? 'false' : 'true' ?>"
+                    aria-label="<?= $isCollapsed ? 'Kanäle und Einstellungen einblenden' : 'Kanäle und Einstellungen ausblenden' ?>"
+                    title="<?= $isCollapsed ? 'Einblenden' : 'Ausblenden' ?>">
+                <svg class="collapse-toggle__icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+                    <path d="M3.5 10l4.5-4.5 4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+    <?php endif; ?>
+
+    <div class="builder__steps" id="builder-steps"<?= $isCollapsed ? ' hidden' : '' ?>>
 
     <section class="card" aria-labelledby="step-1">
         <div class="card__head">
@@ -104,6 +121,8 @@
             <a class="btn btn--ghost" href="<?= $this->e($this->url('/')) ?>">Neuen Feed anlegen</a>
         <?php endif; ?>
     </div>
+
+    </div><!-- /.builder__steps -->
 
     <section class="card card--result" id="result" <?= $isEdit ? '' : 'hidden' ?>>
         <div class="card__head">
