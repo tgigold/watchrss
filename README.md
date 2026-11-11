@@ -454,6 +454,21 @@ allen Templates (`$this->e()`), XML-Erzeugung über `XMLWriter` statt
 String-Konkatenation, `LIBXML_NONET` beim Parsen (kein XXE), Host-Whitelist
 beim Abrufen fremder URLs und IP-Adressen nur gehasht im Cache.
 
+### Fair Use gegenüber YouTube
+
+Alle Abrufe laufen über den Server, werden zwischengespeichert
+(`CHANNEL_REFRESH_SECONDS`, Conditional GET mit ETag/Last-Modified) und
+gedrosselt (`FETCH_BATCH_SIZE`, `FETCH_SLEEP_MICROSECONDS`).
+
+**Bewusste Ausnahme beim User-Agent:** Statt eines eigenen Kennzeichens mit
+Version und Kontaktadresse (`watchrss/1.0 (+…)`) sendet watchrss den
+User-Agent eines gängigen Browsers (`HTTP_USER_AGENT`). YouTube liefert
+Kanalseiten an unbekannte Clients nicht zuverlässig aus. Eine Kontaktadresse
+ist für dieses Projekt nicht vorgesehen. Matomo-Aufrufe tragen dagegen den
+ehrlichen User-Agent `watchrss/1.0`.
+
+### Ausgehende Anfragen
+
 Ausgehende Anfragen laufen ausschließlich über HTTPS, auch Weiterleitungen
 (höchstens drei). `http://`-Links zu YouTube werden hochgestuft. Das
 Auflösen einer Eingabe hat ein Gesamt-Zeitbudget (`RESOLVE_BUDGET_SECONDS`).

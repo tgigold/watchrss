@@ -43,6 +43,11 @@ defined('APP_TIMEZONE') || define('APP_TIMEZONE', 'Europe/Berlin');
  * HTTP-Client (YouTube-Abrufe)
  * ----------------------------------------------------------------------- */
 
+/**
+ * User-Agent für die YouTube-Abrufe. Bewusst ein gängiger Browser statt
+ * "watchrss/<version> (+Kontakt)": YouTube liefert Kanalseiten an
+ * unbekannte Clients nicht zuverlässig aus. Siehe README, "Fair Use".
+ */
 defined('HTTP_USER_AGENT') || define(
     'HTTP_USER_AGENT',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '

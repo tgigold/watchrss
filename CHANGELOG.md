@@ -29,6 +29,8 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   Standard 25 s) und fürs Vorab-Abholen neuer Kanäle (10 s).
 - Fehler-Log der Web-Anwendung in `var/log/error.log` (`ERROR_LOG_FILE`).
 - README-Abschnitt „Betrieb“: Updates, Backup, Logs.
+- README-Abschnitt „Fair Use gegenüber YouTube“, inklusive der bewussten
+  Ausnahme beim User-Agent.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
   (beim Deploy) `vendor/`.
 
