@@ -33,10 +33,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: PHP einrichten
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.2'
           extensions: curl, json, libxml, mbstring, pdo, pdo_mysql, simplexml, xmlwriter
@@ -50,7 +50,7 @@ jobs:
         run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader
 
       - name: Per FTPS hochladen
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@8e83cea8672e3fbcbb9fdafff34debf6ae4c5f65 # v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -66,4 +66,5 @@ jobs:
             config.inc.php
             var/cache/**
             README.md
+            CHANGELOG.md
             LICENSE
