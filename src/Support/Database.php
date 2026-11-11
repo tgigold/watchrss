@@ -6,6 +6,7 @@ namespace WatchRss\Support;
 
 use PDO;
 use PDOException;
+use PDOStatement;
 use RuntimeException;
 
 /**
@@ -41,6 +42,21 @@ final class Database
             (string) DB_PASS,
             defined('DB_CHARSET') ? (string) DB_CHARSET : 'utf8mb4',
         );
+    }
+
+    /**
+     * Statement ohne Parameter (z. B. COUNT(*), SHOW TABLES). Mit
+     * ERRMODE_EXCEPTION wirft PDO bei Fehlern ohnehin; false wird hier
+     * trotzdem abgefangen, damit Aufrufer immer ein Statement bekommen.
+     */
+    public function query(string $sql): PDOStatement
+    {
+        $stmt = $this->pdo()->query($sql);
+        if ($stmt === false) {
+            throw new RuntimeException('Abfrage fehlgeschlagen.');
+        }
+
+        return $stmt;
     }
 
     public function pdo(): PDO

@@ -87,7 +87,7 @@ final class FeedThrottle
         }
 
         $state = $this->state($client);
-        if ($state === null || ($state['e'] ?? '') !== $etag) {
+        if ($state === null || $state['e'] !== $etag) {
             return null; // nichts bekannt oder neuer Inhalt -> freie Fahrt
         }
 
@@ -110,7 +110,7 @@ final class FeedThrottle
         $window = $this->window($ttlSeconds);
         $state  = $this->state($client);
 
-        if ($state === null || ($state['e'] ?? '') !== $etag || (time() - (int) $state['w']) >= $window) {
+        if ($state === null || $state['e'] !== $etag || (time() - (int) $state['w']) >= $window) {
             // Neues Fenster: erster Abruf dieses Inhalts.
             $state = ['w' => time(), 'n' => 1, 'e' => $etag];
         } else {
@@ -184,9 +184,18 @@ final class FeedThrottle
             return null;
         }
 
+        // Der Cache ist eine Datei - kaputter Inhalt darf nicht zu
+        // Typfehlern führen, sondern zählt als "nichts bekannt".
         $decoded = json_decode($raw, true);
+        if (!is_array($decoded) || !is_int($decoded['w'] ?? null) || !is_int($decoded['n'] ?? null)) {
+            return null;
+        }
 
-        return is_array($decoded) && isset($decoded['w'], $decoded['n']) ? $decoded : null;
+        return [
+            'w' => $decoded['w'],
+            'n' => $decoded['n'],
+            'e' => is_string($decoded['e'] ?? null) ? $decoded['e'] : '',
+        ];
     }
 
     private function hourKey(string $client): string

@@ -29,7 +29,12 @@ permissions:
   contents: read
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    # Deployed wird nur nach grüner CI.
+    needs: ci
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 15
@@ -47,9 +52,6 @@ jobs:
           extensions: curl, json, libxml, mbstring, pdo, pdo_mysql, simplexml, xmlwriter
           tools: composer:v2
           coverage: none
-
-      - name: Syntax prüfen
-        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
 
       - name: Autoloader erzeugen
         run: |
@@ -93,5 +95,7 @@ jobs:
               -x '^var/log/' \
               -x '^(README|CHANGELOG)[.]md$' \
               -x '^LICENSE$' \
+              -x '^tests/' \
+              -x '^php(unit[.]xml|stan[.]neon)[.]dist$' \
               . \"$FTP_SERVER_DIR\"
           "

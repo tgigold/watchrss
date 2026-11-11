@@ -91,6 +91,8 @@ final class ApiController
 
     /**
      * POST /api/feeds/{edit_token} - bestehenden Feed ändern.
+     *
+     * @param array<string,string> $params
      */
     public function update(Request $request, array $params): Response
     {
@@ -112,6 +114,8 @@ final class ApiController
 
     /**
      * GET /api/feeds/{edit_token}/preview - aktuelle Einträge des Feeds.
+     *
+     * @param array<string,string> $params
      */
     public function preview(Request $request, array $params): Response
     {
@@ -129,6 +133,8 @@ final class ApiController
      * Die alte RSS-Adresse wird damit ungültig. Möglich ist das nur mit dem
      * geheimen Edit-Token - wer bloß die Feed-Adresse kennt, kann sie also
      * nicht unter dem Besitzer wegziehen.
+     *
+     * @param array<string,string> $params
      */
     public function rotate(Request $request, array $params): Response
     {

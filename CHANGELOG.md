@@ -29,6 +29,11 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   Standard 25 s) und fürs Vorab-Abholen neuer Kanäle (10 s).
 - Fehler-Log der Web-Anwendung in `var/log/error.log` (`ERROR_LOG_FILE`).
 - README-Abschnitt „Betrieb“: Updates, Backup, Logs.
+- Tests mit PHPUnit (Unit und Feature, ohne Datenbank und ohne Netzwerk)
+  und statische Analyse mit PHPStan auf Level 8.
+- CI-Workflow: Lint, PHPUnit und PHPStan unter PHP 8.2 und 8.4 bei jedem
+  Push und Pull Request. Der Deploy läuft nur nach grüner CI.
+- README-Abschnitt „Lokale Entwicklung“ mit Tests.
 - README-Abschnitt „Fair Use gegenüber YouTube“, inklusive der bewussten
   Ausnahme beim User-Agent.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
@@ -65,6 +70,12 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   beliebige IP vortäuschen und die Abrufbremsen umgehen.
 - Feed-, Editor- und API-Links werden nicht mehr aus dem `Host`-Header
   gebaut.
+
+- Composer-Plattform auf PHP 8.2 festgelegt.
+- Kaputte Einträge im Drossel-Cache gelten als „nichts bekannt“, statt zu
+  Typfehlern zu führen.
+- Mehrfach angegebenes `--channel` in `bin/fetch.php` wird ignoriert statt
+  als „Array“ übernommen.
 
 ### Entfernt
 

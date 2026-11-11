@@ -20,7 +20,8 @@ final class Input
      * Text: nur Strings, gültiges UTF-8, höchstens $maxLength Zeichen.
      * Fehlt das Feld (oder ist null), kommt $default zurück.
      *
-     * @param array<array-key,mixed> $data
+     * @param  array<array-key,mixed> $data
+     * @return ($default is null ? string|null : string)
      */
     public static function string(array $data, string $field, ?string $default, int $maxLength, ?string $path = null): ?string
     {
@@ -51,7 +52,8 @@ final class Input
     /**
      * Ganzzahl in [$min, $max]. Akzeptiert int und Ziffern-Strings.
      *
-     * @param array<array-key,mixed> $data
+     * @param  array<array-key,mixed> $data
+     * @return ($default is null ? int|null : int)
      */
     public static function int(array $data, string $field, ?int $default, int $min, int $max): ?int
     {

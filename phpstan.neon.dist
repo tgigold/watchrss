@@ -1,0 +1,54 @@
+# Statische Analyse. Aufruf: vendor/bin/phpstan analyse
+
+parameters:
+    level: 8
+    paths:
+        - src
+        - bin
+        - tests
+        - www/index.php
+        - bootstrap.php
+    bootstrapFiles:
+        - tests/constants.php
+    # Werte aus der Konfiguration sind zur Laufzeit veränderlich - sonst
+    # hält PHPStan z. B. "APP_DEBUG ? ..." für immer falsch.
+    dynamicConstantNames:
+        - APP_BASE_URL
+        - APP_DEBUG
+        - APP_NAME
+        - APP_TIMEZONE
+        - CACHE_DIR
+        - CHANNEL_REFRESH_SECONDS
+        - CRON_MAX_SECONDS
+        - CRON_TOKEN
+        - DB_CHARSET
+        - DB_HOST
+        - DB_NAME
+        - DB_PASS
+        - DB_PORT
+        - DB_USER
+        - ERROR_LOG_FILE
+        - FEED_ABUSE_LIMIT_PER_HOUR
+        - FEED_DEFAULT_MAX_ITEMS
+        - FEED_DEFAULT_TTL_MINUTES
+        - FEED_MAX_CHANNELS
+        - FEED_MAX_ITEMS_LIMIT
+        - FEED_THROTTLE_BURST
+        - FEED_THROTTLE_RATIO
+        - FEED_TTL_CHOICES
+        - FEED_UNKNOWN_LIMIT_PER_HOUR
+        - FETCH_BATCH_SIZE
+        - FETCH_SLEEP_MICROSECONDS
+        - HTTP_CONNECT_TIMEOUT
+        - HTTP_TIMEOUT
+        - HTTP_USER_AGENT
+        - MATOMO_ENABLED
+        - MATOMO_SITE_ID
+        - MATOMO_TIMEOUT
+        - MATOMO_URL
+        - PHP_VERSION_ID
+        - RESOLVE_BUDGET_SECONDS
+        - TRACKING_HONOR_DNT
+        - TRACKING_SALT
+        - TRUSTED_PROXIES
+        - VIDEO_RETENTION_PER_CHANNEL

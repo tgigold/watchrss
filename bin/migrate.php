@@ -39,7 +39,8 @@ $options = getopt('', ['finish', 'status']);
 $finish  = isset($options['finish']);
 $dryRun  = isset($options['status']);
 
-$pdo = $app->database()->pdo();
+$db  = $app->database();
+$pdo = $db->pdo();
 
 /** Gibt es diese Spalte? */
 $hasColumn = static function (string $table, string $column) use ($pdo): bool {
@@ -90,10 +91,10 @@ $steps = [
         'name'   => 'feeds.feed_token anlegen und öffentliche Tokens erzeugen',
         'finish' => false,
         'needed' => static fn (): bool => !$hasColumn('feeds', 'feed_token'),
-        'apply'  => static function () use ($pdo): string {
+        'apply'  => static function () use ($pdo, $db): string {
             $pdo->exec('ALTER TABLE `feeds` ADD COLUMN `feed_token` VARCHAR(32) NULL DEFAULT NULL AFTER `edit_token`');
 
-            $ids     = $pdo->query('SELECT id FROM feeds')->fetchAll(PDO::FETCH_COLUMN);
+            $ids     = $db->query('SELECT id FROM feeds')->fetchAll(PDO::FETCH_COLUMN);
             $update  = $pdo->prepare('UPDATE feeds SET feed_token = ? WHERE id = ?');
             $created = 0;
 
@@ -142,9 +143,9 @@ $steps = [
         'name'   => 'alte Spalte feeds.token entfernen',
         'finish' => true,
         'needed' => static fn (): bool => $hasColumn('feeds', 'token'),
-        'apply'  => static function () use ($pdo): string {
+        'apply'  => static function () use ($pdo, $db): string {
             // Sicherheitsnetz: nur löschen, wenn jede Zeile einen edit_token hat.
-            $orphans = (int) $pdo->query(
+            $orphans = (int) $db->query(
                 "SELECT COUNT(*) FROM feeds WHERE edit_token IS NULL OR edit_token = ''"
             )->fetchColumn();
 

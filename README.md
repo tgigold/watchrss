@@ -135,9 +135,38 @@ die Verbindung kappt – der Rest kommt beim nächsten Aufruf dran. Ein
 
 ---
 
+## Lokale Entwicklung
+
+```bash
+composer install                              # inkl. PHPUnit und PHPStan
+cp config.inc.sample.php config.inc.php       # lokale DB eintragen
+php -S 127.0.0.1:8099 -t www www/index.php    # http://127.0.0.1:8099
+```
+
+Lokal darf `APP_BASE_URL` leer bleiben (`localhost`, `127.0.0.1`, `*.test`,
+`*.local`); dann gibt es auch keinen HTTPS-Redirect.
+
+### Tests und statische Analyse
+
+```bash
+vendor/bin/phpunit     # Unit- und Feature-Tests
+vendor/bin/phpstan     # statische Analyse, Level 8
+```
+
+Die Tests laden nie die echte `config.inc.php`, sprechen keine Datenbank und
+keinen externen Dienst an – ihre Konstanten stehen in `tests/constants.php`.
+Feature-Tests schicken ganze Requests durch `App::handle()`, beschränkt auf
+Pfade ohne Datenbank (Redirects, Header, Validierung, Web-Trigger).
+
+Die CI (`.github/workflows/ci.yml`) führt bei jedem Push und Pull Request
+Lint, PHPUnit und PHPStan unter PHP 8.2 und 8.4 aus. `composer.json` legt die
+Plattform auf PHP 8.2 fest, damit `composer.lock` zur Mindestversion passt.
+
+---
+
 ## Deployment
 
-Jeder Push auf `main` wird per GitHub Actions (`.github/workflows/deploy.yml`)
+Jeder Push auf `main` wird – **nur wenn die CI grün ist** – per GitHub Actions (`.github/workflows/deploy.yml`)
 über FTPS auf den Server geladen; manuell auslösbar unter *Actions → Deploy →
 Run workflow*. Der Workflow erzeugt vorher den Autoloader (`composer install`).
 

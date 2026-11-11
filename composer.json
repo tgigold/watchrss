@@ -21,11 +21,18 @@
     },
     "config": {
         "optimize-autoloader": true,
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2.0"
+        }
     },
     "scripts": {
         "db:install": "php bin/install.php",
         "feeds:fetch": "php bin/fetch.php",
         "serve": "php -S 127.0.0.1:8080 -t www www/index.php"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5"
     }
 }

@@ -34,6 +34,8 @@ final class PageController
     /**
      * Editor für einen bestehenden Feed. Der Token in der URL ist der
      * einzige Zugangsschutz - bewusst so gewählt (siehe README).
+     *
+     * @param array<string,string> $params
      */
     public function edit(Request $request, array $params): Response
     {

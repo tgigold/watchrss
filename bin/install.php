@@ -58,7 +58,7 @@ $statements = array_values(array_filter(
 ));
 
 $pdo = $app->database()->pdo();
-echo 'Datenbank: ', DB_NAME, '@', DB_HOST, ' (', $pdo->query('SELECT VERSION()')->fetchColumn(), ")\n\n";
+echo 'Datenbank: ', DB_NAME, '@', DB_HOST, ' (', $app->database()->query('SELECT VERSION()')->fetchColumn(), ")\n\n";
 
 foreach ($statements as $statement) {
     $statement = rtrim($statement, ";\n ");
@@ -79,7 +79,7 @@ foreach ($statements as $statement) {
 }
 
 // --- 3. Ergebnis -----------------------------------------------------------
-$tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+$tables = $app->database()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 echo "\nTabellen: ", implode(', ', $tables), "\n";
 echo "\nFertig. Nächster Schritt: Cronjob einrichten\n";
 echo "  */10 * * * * ", PHP_BINARY, ' ', $root, "/bin/fetch.php --quiet\n";

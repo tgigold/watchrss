@@ -261,7 +261,7 @@ final class App
      */
     private function httpsRedirect(Request $request): ?Response
     {
-        $base = defined('APP_BASE_URL') ? rtrim((string) APP_BASE_URL, '/') : '';
+        $base = $request->configuredBaseUrl;
         if ($request->secure || !str_starts_with($base, 'https://')) {
             return null;
         }

@@ -46,8 +46,9 @@ $summary = $app->fetchRunner()->run(
     force: isset($options['force']),
     maxSeconds: isset($options['max-seconds']) ? max(0, (int) $options['max-seconds']) : 0,
     prune: isset($options['prune']),
-    onlyChannelId: isset($options['channel']) && $options['channel'] !== false
-        ? (string) $options['channel']
+    // getopt liefert ein Array, wenn die Option mehrfach angegeben wurde.
+    onlyChannelId: isset($options['channel']) && is_string($options['channel'])
+        ? $options['channel']
         : null,
 );
 

@@ -47,10 +47,9 @@ final class IpRange
             return false;
         }
 
-        [$net, $bits] = str_contains($range, '/')
-            ? explode('/', $range, 2)
-            : [$range, null];
-
+        $parts  = explode('/', $range, 2);
+        $net    = $parts[0];
+        $bits   = $parts[1] ?? null;
         $netBin = @inet_pton(trim($net));
         if ($netBin === false || strlen($netBin) !== strlen($ipBin)) {
             return false;

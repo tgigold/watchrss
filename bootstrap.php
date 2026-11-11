@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-if (PHP_VERSION_ID < 80200) {
+if (version_compare(PHP_VERSION, '8.2.0', '<')) {
     exit('watchrss benötigt PHP 8.2 oder neuer.');
 }
 

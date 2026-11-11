@@ -127,7 +127,7 @@ final class ChannelRepository
         $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
 
-        return array_map(Channel::fromRow(...), $stmt->fetchAll());
+        return array_values(array_map(Channel::fromRow(...), $stmt->fetchAll()));
     }
 
     /**
@@ -182,12 +182,10 @@ final class ChannelRepository
     /** @return array{channels:int,videos:int,feeds:int} */
     public function stats(): array
     {
-        $pdo = $this->db->pdo();
-
         return [
-            'channels' => (int) $pdo->query('SELECT COUNT(*) FROM channels')->fetchColumn(),
-            'videos'   => (int) $pdo->query('SELECT COUNT(*) FROM videos')->fetchColumn(),
-            'feeds'    => (int) $pdo->query('SELECT COUNT(*) FROM feeds')->fetchColumn(),
+            'channels' => (int) $this->db->query('SELECT COUNT(*) FROM channels')->fetchColumn(),
+            'videos'   => (int) $this->db->query('SELECT COUNT(*) FROM videos')->fetchColumn(),
+            'feeds'    => (int) $this->db->query('SELECT COUNT(*) FROM feeds')->fetchColumn(),
         ];
     }
 }

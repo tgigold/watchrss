@@ -181,7 +181,7 @@ final class ChannelResolver
     private function store(string $channelId, ?string $handle, string $sourceUrl, ?string $avatarUrl = null): Channel
     {
         $existing = $this->channels->findByChannelId($channelId);
-        $title    = $existing?->title ?? '';
+        $title    = $existing->title ?? '';
 
         if ($title === '') {
             $meta = $this->feedFetcher->fetchMetadata($channelId);

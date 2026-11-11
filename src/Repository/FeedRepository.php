@@ -92,7 +92,7 @@ final class FeedRepository
         );
         $stmt->execute([$feedId]);
 
-        return array_map(FeedChannel::fromRow(...), $stmt->fetchAll());
+        return array_values(array_map(FeedChannel::fromRow(...), $stmt->fetchAll()));
     }
 
     /**
@@ -204,7 +204,7 @@ final class FeedRepository
                     position       = VALUES(position)'
             );
 
-            foreach (array_values($channels) as $position => $channel) {
+            foreach ($channels as $position => $channel) {
                 $stmt->execute([
                     'feed_id'        => $feedId,
                     'channel_ref'    => $channel['channel_ref'],

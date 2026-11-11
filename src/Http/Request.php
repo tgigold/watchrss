@@ -30,6 +30,8 @@ final class Request
         public readonly string $clientIp = '0.0.0.0',
         public readonly bool $secure = false,
         public readonly string $host = 'localhost',
+        /** APP_BASE_URL aus der Konfiguration, ohne abschließenden Slash. */
+        public readonly string $configuredBaseUrl = '',
     ) {
     }
 
@@ -82,6 +84,7 @@ final class Request
             clientIp: self::detectClientIp($remoteAddr, $viaProxy, $trustedProxies),
             secure: self::detectHttps($viaProxy),
             host: (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'),
+            configuredBaseUrl: rtrim(defined('APP_BASE_URL') ? (string) APP_BASE_URL : '', '/'),
         );
     }
 
@@ -115,8 +118,8 @@ final class Request
      */
     public function baseUrl(): string
     {
-        if (defined('APP_BASE_URL') && APP_BASE_URL !== '') {
-            return rtrim((string) APP_BASE_URL, '/');
+        if ($this->configuredBaseUrl !== '') {
+            return $this->configuredBaseUrl;
         }
 
         if ($this->isLocalHost()) {

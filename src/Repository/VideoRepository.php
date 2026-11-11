@@ -120,7 +120,7 @@ final class VideoRepository
         $stmt->bindValue('limit', $limit ?? $feed->maxItems, PDO::PARAM_INT);
         $stmt->execute();
 
-        return array_map(Video::fromRow(...), $stmt->fetchAll());
+        return array_values(array_map(Video::fromRow(...), $stmt->fetchAll()));
     }
 
     /**
@@ -146,7 +146,7 @@ final class VideoRepository
                     COALESCE(MAX(updated_at), '') AS last_update
              FROM videos WHERE channel_ref IN ({$placeholders})"
         );
-        $stmt->execute(array_values($channelRefs));
+        $stmt->execute($channelRefs);
         $row = $stmt->fetch() ?: [];
 
         return implode('|', [
@@ -204,6 +204,6 @@ final class VideoRepository
         $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
 
-        return array_map(Video::fromRow(...), $stmt->fetchAll());
+        return array_values(array_map(Video::fromRow(...), $stmt->fetchAll()));
     }
 }

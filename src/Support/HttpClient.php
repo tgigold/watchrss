@@ -49,6 +49,10 @@ final class HttpClient
             $headers[] = $name . ': ' . $value;
         }
 
+        if ($url === '') {
+            return new HttpResponse(0, '', [], 'Leere URL', '');
+        }
+
         $responseHeaders = [];
         $ch              = curl_init();
 
@@ -59,7 +63,7 @@ final class HttpClient
             CURLOPT_MAXREDIRS      => self::MAX_REDIRECTS,
             CURLOPT_TIMEOUT        => $this->timeout,
             CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
-            CURLOPT_USERAGENT      => $this->userAgent,
+            CURLOPT_USERAGENT      => $this->userAgent !== '' ? $this->userAgent : 'watchrss',
             CURLOPT_HTTPHEADER     => $headers,
             CURLOPT_ENCODING       => '',            // alle unterstützten Encodings
             CURLOPT_SSL_VERIFYPEER => true,
