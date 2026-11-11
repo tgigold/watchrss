@@ -398,8 +398,9 @@ und Styles, Bilder zusätzlich von den YouTube-CDNs, `object-src 'none'`,
 also nie den Pfad mit dem Editor-Token. Über HTTPS kommt HSTS dazu.
 
 Ist `APP_BASE_URL` eine `https://`-Adresse, leitet die App unverschlüsselte
-Aufrufe dorthin um (GET: 301, sonst 308). In `www/.htaccess` liegt eine
-vorbereitete, auskommentierte Regel für dasselbe auf Webserver-Ebene.
+Aufrufe dorthin um (GET: 301, sonst 308). `www/.htaccess` macht dasselbe auf
+Webserver-Ebene, mit fest eingetragener Domain `watchrss.de` – wer watchrss
+selbst betreibt, passt sie dort an.
 
 `X-Forwarded-For` und `X-Forwarded-Proto` zählen nur, wenn der Request von
 einer Adresse aus `TRUSTED_PROXIES` kommt. Sonst könnte jeder Client sich per

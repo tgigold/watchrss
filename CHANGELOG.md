@@ -22,7 +22,7 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Security-Header auf jeder Antwort: Content Security Policy,
   `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, über HTTPS
   zusätzlich HSTS.
-- HTTPS-Redirect auf `APP_BASE_URL` in der App; vorbereitete Regel in
+- HTTPS-Redirect auf `APP_BASE_URL` in der App und auf `watchrss.de` in
   `www/.htaccess`.
 - `TRUSTED_PROXIES`: Liste vertrauenswürdiger Reverse-Proxys.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
