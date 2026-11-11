@@ -6,7 +6,7 @@ parameters:
         - src
         - bin
         - tests
-        - www/index.php
+        - public/index.php
         - bootstrap.php
         - migrations
     bootstrapFiles:

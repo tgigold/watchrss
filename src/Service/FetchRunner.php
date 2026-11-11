@@ -76,6 +76,13 @@ final class FetchRunner
                 $result = $this->fetcher->fetch($channel);
                 $lines[] = $channel->displayName() . ' – ' . $result->summary();
 
+                // YouTube ist per Circuit Breaker gesperrt: Die übrigen Kanäle
+                // liegen auf demselben Dienst - Rest beim nächsten Lauf.
+                if ($result->status === 'skipped') {
+                    $stoppedEarly = true;
+                    break;
+                }
+
                 match ($result->status) {
                     'ok'           => $updated++,
                     'not_modified' => $notModified++,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WatchRss\Service\Tracking;
 
+use WatchRss\App;
 use WatchRss\Support\HttpClient;
 
 /**
@@ -18,7 +19,7 @@ use WatchRss\Support\HttpClient;
  * es das Gegenteil - ein kurzer POST, knappes Zeitlimit, Ergebnis egal.
  *
  * Aufgerufen wird das Ganze erst NACH dem Senden der Antwort (siehe
- * www/index.php), der Besucher wartet also nie auf Matomo.
+ * public/index.php), der Besucher wartet also nie auf Matomo.
  */
 final class MatomoTracker implements TrackerInterface
 {
@@ -130,7 +131,7 @@ final class MatomoTracker implements TrackerInterface
             // Ohne NOSIGNAL kann cURL bei kurzen Timeouts Signale benutzen,
             // was in manchen SAPIs Ärger macht.
             CURLOPT_NOSIGNAL       => true,
-            CURLOPT_USERAGENT      => 'watchrss/1.0 (+server-side tracking)',
+            CURLOPT_USERAGENT      => 'watchrss/' . App::VERSION . ' (+server-side tracking)',
         ] + HttpClient::httpsOnlyOptions());
 
         curl_exec($handle);

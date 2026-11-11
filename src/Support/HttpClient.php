@@ -24,12 +24,13 @@ final class HttpClient
         private readonly string $userAgent,
         private readonly int $timeout = 15,
         private readonly int $connectTimeout = 8,
+        private readonly ?CircuitBreaker $breaker = null,
     ) {
     }
 
-    public static function fromConfig(): self
+    public static function fromConfig(?CircuitBreaker $breaker = null): self
     {
-        return new self((string) HTTP_USER_AGENT, (int) HTTP_TIMEOUT, (int) HTTP_CONNECT_TIMEOUT);
+        return new self((string) HTTP_USER_AGENT, (int) HTTP_TIMEOUT, (int) HTTP_CONNECT_TIMEOUT, $breaker);
     }
 
     /**
@@ -51,6 +52,13 @@ final class HttpClient
 
         if ($url === '') {
             return new HttpResponse(0, '', [], 'Leere URL', '');
+        }
+
+        // Ausgefallener Dienst? Dann gar nicht erst anfragen.
+        $service    = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $retryAfter = $this->breaker?->retryAfter($service);
+        if ($retryAfter !== null) {
+            return new HttpResponse(0, '', [], sprintf('%s vorübergehend übersprungen (noch %d s)', $service, $retryAfter), $url, skipped: true);
         }
 
         $responseHeaders = [];
@@ -86,6 +94,14 @@ final class HttpClient
         $final  = (string) curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
         $error  = curl_errno($ch) !== 0 ? curl_error($ch) : null;
         curl_close($ch);
+
+        // Komplettausfall: kein HTTP-Ergebnis, Serverfehler oder Drosselung.
+        // 404 & Co. sind normale Antworten und zählen als Erfolg.
+        if ($error !== null || $status >= 500 || $status === 429) {
+            $this->breaker?->recordFailure($service);
+        } else {
+            $this->breaker?->recordSuccess($service);
+        }
 
         return new HttpResponse(
             $status,

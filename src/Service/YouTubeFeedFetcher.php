@@ -69,6 +69,12 @@ final class YouTubeFeedFetcher
             $channel->httpLastModified,
         );
 
+        // YouTube per Circuit Breaker gesperrt: nicht als Fehler des Kanals
+        // werten - sonst rutscht er unverschuldet in den Backoff.
+        if ($response->skipped) {
+            return new FetchResult($channel->channelId, 'skipped', message: $response->error);
+        }
+
         if ($response->error !== null) {
             $this->channels->markFetched($channel->id, 'error', $response->error);
 

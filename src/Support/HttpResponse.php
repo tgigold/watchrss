@@ -18,6 +18,8 @@ final class HttpResponse
         public readonly array $headers = [],
         public readonly ?string $error = null,
         public readonly string $effectiveUrl = '',
+        /** true = gar nicht erst gesendet, Dienst per Circuit Breaker gesperrt. */
+        public readonly bool $skipped = false,
     ) {
     }
 

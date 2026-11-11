@@ -1,5 +1,5 @@
 # Kein Webzugriff auf dieses Verzeichnis - auch dann nicht, wenn das
-# Document-Root versehentlich auf den Projektstamm statt auf www/ zeigt.
+# Document-Root versehentlich auf den Projektstamm statt auf public/ zeigt.
 <IfModule mod_authz_core.c>
     Require all denied
 </IfModule>

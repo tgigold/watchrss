@@ -106,6 +106,7 @@ final class MysqlFeedFlowTest extends TestCase
             path: $path,
             basePath: '',
             body: $body,
+            headers: $method === 'POST' ? ['content-type' => 'application/json', 'origin' => 'https://watchrss.de'] : [],
             clientIp: '203.0.113.' . random_int(1, 250),
             secure: true,
             host: 'watchrss.de',

@@ -9,7 +9,7 @@
 
 declare(strict_types=1);
 
-// Eingebauter PHP-Entwicklungsserver (php -S ... www/index.php): vorhandene
+// Eingebauter PHP-Entwicklungsserver (php -S ... public/index.php): vorhandene
 // Dateien wie CSS/JS direkt ausliefern. Unter Apache/nginx erledigt das die
 // Server-Konfiguration (siehe .htaccess), dieser Block greift dort nie.
 if (PHP_SAPI === 'cli-server') {

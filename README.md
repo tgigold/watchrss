@@ -23,6 +23,30 @@ Eingabe (URL / @handle / Channel-ID)
 
 ## Installation
 
+### Ohne Kommandozeile (Webhosting)
+
+1. Dateien per FTP hochladen (oder per Deploy, siehe unten), Document-Root
+   auf `public/` stellen. `vendor/` kommt aus `composer install` – beim
+   Deploy erledigt das die CI.
+2. Die Adresse im Browser aufrufen. Ohne `config.inc.php` landet jede Seite
+   im **geführten Setup** (`/setup`).
+3. Den **Setup-Code** per FTP aus `var/setup-code.txt` holen und eingeben –
+   so richtet nur ein, wer Zugriff auf den Server hat.
+4. Öffentliche Adresse und Datenbank-Zugang eintragen. Das Setup prüft die
+   Umgebung (PHP-Version, Erweiterungen, Schreibrechte), testet die
+   Verbindung, legt Tabellen an, führt die Migrationen aus, erzeugt
+   `CRON_TOKEN`, `TRACKING_SALT` und `ADMIN_TOKEN` und schreibt
+   `config.inc.php`.
+5. Danach **sperrt sich das Setup selbst** (`config.inc.php` und
+   `var/setup.lock` existieren, der Code ist gelöscht). Admin-Token und
+   Cron-Adresse werden einmal angezeigt.
+
+Nach 5 falschen Codes je IP oder 25 insgesamt ist das Setup 15 Minuten
+gesperrt. Neu einrichten: `config.inc.php` und `var/setup.lock` per FTP
+löschen.
+
+### Mit Kommandozeile
+
 ```bash
 cp config.inc.sample.php config.inc.php   # Zugangsdaten eintragen
 composer install          # nur der Autoloader, keine Fremdpakete
@@ -66,27 +90,27 @@ Instanz von `WatchRss\Migration\Migration` zurückgibt (Vorlage:
 
 ### Webserver
 
-Der Document-Root muss auf **`www/`** zeigen. Alles andere (Konfiguration,
+Der Document-Root muss auf **`public/`** zeigen. Alles andere (Konfiguration,
 Klassen, Templates, Cache) liegt eine Ebene darüber und ist damit über die
 Domain nicht erreichbar.
 
-* **Apache**: `www/.htaccess` ist dabei, es braucht `mod_rewrite`.
+* **Apache**: `public/.htaccess` ist dabei, es braucht `mod_rewrite`.
   Im Projektstamm liegt zusätzlich eine `.htaccess`, die einzelne Dateinamen
   sperrt (`config.inc.php`, `*.sql`, …). Sie ist bewusst **nicht** als
   pauschales `Require all denied` formuliert: viele Hoster werten
   `.htaccess`-Dateien auch oberhalb des Document-Roots aus, ein Pauschalverbot
-  würde sich nach `www/` vererben und die komplette Seite sperren.
+  würde sich nach `public/` vererben und die komplette Seite sperren.
 * **nginx**:
 
   ```nginx
-  root /pfad/zu/watchrss/www;
+  root /pfad/zu/watchrss/public;
   location / { try_files $uri $uri/ /index.php$is_args$args; }
   ```
 
 Lokal zum Ausprobieren:
 
 ```bash
-php -S 127.0.0.1:8099 -t www www/index.php
+php -S 127.0.0.1:8099 -t public public/index.php
 ```
 
 ### Cronjob
@@ -162,7 +186,7 @@ die Verbindung kappt – der Rest kommt beim nächsten Aufruf dran. Ein
 ```bash
 composer install                              # inkl. PHPUnit und PHPStan
 cp config.inc.sample.php config.inc.php       # lokale DB eintragen
-php -S 127.0.0.1:8099 -t www www/index.php    # http://127.0.0.1:8099
+php -S 127.0.0.1:8099 -t public public/index.php    # http://127.0.0.1:8099
 ```
 
 Lokal darf `APP_BASE_URL` leer bleiben (`localhost`, `127.0.0.1`, `*.test`,
@@ -180,8 +204,26 @@ keinen externen Dienst an – ihre Konstanten stehen in `tests/constants.php`.
 Feature-Tests schicken ganze Requests durch `App::handle()`, beschränkt auf
 Pfade ohne Datenbank (Redirects, Header, Validierung, Web-Trigger).
 
+### Browser-Tests
+
+```bash
+npm ci && npx playwright install chromium
+npx playwright test
+```
+
+Playwright startet den PHP-Server und prüft das Frontend im echten Browser:
+Startseite ohne Konsolenfehler und CSP-Verstöße, Feed anlegen, Editor öffnen,
+Adresse rotieren, Fehleranzeige. `/api/resolve` wird im Test abgefangen, es
+geht kein Request zu YouTube. Voraussetzung ist eine **Test-Datenbank** mit
+dem Kanal `UCbrowsertestchannel0000` – die CI legt beides in einem
+Wegwerf-Container an (siehe Job `browser` in `ci.yml`). Nie gegen die echte
+Konfiguration laufen lassen.
+
+### CI
+
 Die CI (`.github/workflows/ci.yml`) führt bei jedem Push und Pull Request
-Lint, PHPUnit und PHPStan unter PHP 8.2 und 8.4 aus. `composer.json` legt die
+Lint, PHPUnit und PHPStan unter PHP 8.2 und 8.4 aus, dazu Integrationstests
+gegen MySQL 8.4 und MariaDB 11.4 und die Browser-Tests. `composer.json` legt die
 Plattform auf PHP 8.2 fest, damit `composer.lock` zur Mindestversion passt.
 
 ---
@@ -268,6 +310,7 @@ Die wichtigsten Werte:
 | `ADMIN_MAX_FAILURES` / `ADMIN_LOCK_MINUTES` | `5` / `15` | Sperre von `/admin` nach Fehlversuchen je IP |
 | `BACKUP_DIR` | `var/backups` | Ziel der automatischen Backups vor Migrationen |
 | `BACKUP_KEEP` | `10` | So viele Backups bleiben liegen |
+| `BREAKER_THRESHOLD` / `BREAKER_COOLDOWN_SECONDS` | `5` / `300` | Circuit Breaker für YouTube & Co. |
 | `ERROR_LOG_FILE` | `var/log/error.log` | Fehler-Log der Web-Anwendung (CLI schreibt nach STDERR). Leer = Server-Standard |
 
 ---
@@ -416,7 +459,7 @@ src/
   Http/                 Request, Response, Router, Controller/
   View/Renderer.php     Template-Engine (schlichte PHP-Templates)
 templates/              Darstellung – enthält keine Logik
-www/                    Webroot: index.php, .htaccess, assets/
+public/                 Webroot: index.php, .htaccess, assets/
 var/cache/              Datei-Cache (muss beschreibbar sein)
 ```
 
@@ -428,19 +471,30 @@ Werte und rufen nichts ab.
 
 ## HTTP-Endpunkte
 
-| Methode | Pfad | Zweck |
-|---|---|---|
-| `GET` | `/` | Feed zusammenstellen |
-| `GET` | `/e/{edit_token}` | Editor eines bestehenden Feeds (geheim) |
-| `GET` | `/f/{feed_token}` | der generierte RSS-Feed (öffentlich, `.xml` optional) |
-| `POST` | `/api/resolve` | `{"input": "…"}` → aufgelöste Kanäle + Fehlerliste |
-| `POST` | `/api/feeds` | Feed anlegen |
-| `POST` | `/api/feeds/{edit_token}` | Feed ändern |
-| `GET` | `/api/feeds/{edit_token}/preview` | aktuelle Einträge als JSON |
-| `POST` | `/api/feeds/{edit_token}/rotate` | neue öffentliche Adresse erzeugen |
-| `GET` | `/cron/{CRON_TOKEN}` | Abruflauf anstoßen (Ersatz für den Konsolen-Cron) |
-| `GET` | `/admin` | Wartung: Formular für den `ADMIN_TOKEN` |
-| `POST` | `/admin` | Migrationsstatus (`action=status`) oder Migrationen ausführen (`action=migrate`); Token nur im Body |
+Alle Routen stehen an einem Ort (`App::router()`). Jede Route gibt
+ausdrücklich an, wer sie aufrufen darf (`Http\Access`), jede POST-Route
+ihren CSRF-Schutz (`Http\Csrf`) – ohne diese Angaben lässt sich keine Route
+registrieren. Für jeden POST gilt zusätzlich: Ein Origin-Header von einer
+fremden Seite (oder `null`) führt zu 403.
+
+| Methode | Pfad | Zugang | CSRF | Zweck |
+|---|---|---|---|---|
+| `GET` | `/` | öffentlich | – | Feed zusammenstellen |
+| `GET` | `/e/{edit_token}` | Token in der URL | – | Editor eines bestehenden Feeds |
+| `GET` | `/f/{feed_token}` | öffentlich | – | der generierte RSS-Feed (`.xml` optional) |
+| `POST` | `/api/resolve` | öffentlich | nur JSON | `{"input": "…"}` → aufgelöste Kanäle + Fehlerliste |
+| `POST` | `/api/feeds` | öffentlich | nur JSON | Feed anlegen (liefert den Bearbeiten-Link einmalig) |
+| `POST` | `/api/feeds/{edit_token}` | Token in der URL | nur JSON | Feed ändern |
+| `GET` | `/api/feeds/{edit_token}/preview` | Token in der URL | – | aktuelle Einträge als JSON |
+| `POST` | `/api/feeds/{edit_token}/rotate` | Token in der URL | nur JSON | neue öffentliche Adresse erzeugen |
+| `GET` | `/cron/{CRON_TOKEN}` | Token in der URL | – | Abruflauf anstoßen (Ersatz für den Konsolen-Cron) |
+| `GET` | `/admin` | öffentlich (nur Formular) | – | Wartung: Formular für den `ADMIN_TOKEN` |
+| `POST` | `/admin` | `ADMIN_TOKEN` im Body | Geheimnis im Body | Migrationsstatus oder Migrationen ausführen |
+| `GET`/`POST` | `/setup` | Setup-Code im Body | Geheimnis im Body | nur ohne `config.inc.php`, siehe Installation |
+
+„nur JSON“: Die Route nimmt nur `Content-Type: application/json` an (sonst
+415). Fremde Seiten können solche Requests nur mit CORS-Preflight senden, und
+den beantwortet watchrss nicht.
 
 ---
 
@@ -497,7 +551,7 @@ und Styles, Bilder zusätzlich von den YouTube-CDNs, `object-src 'none'`,
 also nie den Pfad mit dem Editor-Token. Über HTTPS kommt HSTS dazu.
 
 Ist `APP_BASE_URL` eine `https://`-Adresse, leitet die App unverschlüsselte
-Aufrufe dorthin um (GET: 301, sonst 308). `www/.htaccess` macht dasselbe auf
+Aufrufe dorthin um (GET: 301, sonst 308). `public/.htaccess` macht dasselbe auf
 Webserver-Ebene, mit fest eingetragener Domain `watchrss.de` – wer watchrss
 selbst betreibt, passt sie dort an.
 
@@ -507,7 +561,7 @@ Header eine andere IP geben und die Abrufbremsen umgehen.
 
 ### Verzeichnisschutz
 
-Neben `www/` liegt alles andere außerhalb des Document-Roots. Als zweite
+Neben `public/` liegt alles andere außerhalb des Document-Roots. Als zweite
 Sicherung tragen `bin/`, `src/`, `templates/`, `var/` und `vendor/` (beim
 Deploy erzeugt) je eine `.htaccess` mit `Require all denied` – das greift auch,
 wenn das Document-Root versehentlich auf den Projektstamm zeigt. Die
@@ -531,9 +585,15 @@ Version und Kontaktadresse (`watchrss/1.0 (+…)`) sendet watchrss den
 User-Agent eines gängigen Browsers (`HTTP_USER_AGENT`). YouTube liefert
 Kanalseiten an unbekannte Clients nicht zuverlässig aus. Eine Kontaktadresse
 ist für dieses Projekt nicht vorgesehen. Matomo-Aufrufe tragen dagegen den
-ehrlichen User-Agent `watchrss/1.0`.
+ehrlichen User-Agent `watchrss/<Version>`.
 
 ### Ausgehende Anfragen
+
+Fällt ein Dienst komplett aus (Timeout, Netzwerkfehler, 5xx, 429), zählt
+ein **Circuit Breaker** mit: Nach `BREAKER_THRESHOLD` Ausfällen in Folge wird
+er `BREAKER_COOLDOWN_SECONDS` lang übersprungen – ein einzelner Timeout sperrt
+nichts. Der Abruflauf bricht dann ab, statt jeden Kanal einzeln ins Leere
+laufen zu lassen, und Kanäle rutschen nicht unverschuldet in den Backoff.
 
 Ausgehende Anfragen laufen ausschließlich über HTTPS, auch Weiterleitungen
 (höchstens drei). `http://`-Links zu YouTube werden hochgestuft. Das

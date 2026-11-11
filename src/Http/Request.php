@@ -129,6 +129,51 @@ final class Request
         throw new RuntimeException('APP_BASE_URL ist nicht gesetzt (config.inc.php).');
     }
 
+    /** Body als JSON gesendet (Content-Type application/json)? */
+    public function hasJsonBody(): bool
+    {
+        return str_contains(strtolower($this->header('content-type') ?? ''), 'application/json');
+    }
+
+    /**
+     * Kommt der Request von der eigenen Seite?
+     *
+     * Browser schicken bei POST einen Origin-Header. Fehlt er (z. B. curl,
+     * Feed-Reader), gilt der Request als unverdächtig - CSRF braucht einen
+     * Browser. "null" (Sandbox, file://) oder eine fremde Adresse nicht.
+     */
+    public function isSameOrigin(): bool
+    {
+        $origin = $this->header('origin');
+        if ($origin === null || $origin === '') {
+            return true;
+        }
+
+        try {
+            $own = self::originOf($this->baseUrl());
+        } catch (RuntimeException) {
+            return false;
+        }
+
+        return $own !== null && self::originOf($origin) === $own;
+    }
+
+    /** "https://Example.org:443/pfad" -> "https://example.org" */
+    private static function originOf(string $url): ?string
+    {
+        $parts  = parse_url($url);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host   = strtolower((string) ($parts['host'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return null;
+        }
+
+        $port    = $parts['port'] ?? null;
+        $default = $scheme === 'https' ? 443 : 80;
+
+        return $scheme . '://' . $host . ($port !== null && $port !== $default ? ':' . $port : '');
+    }
+
     /** Lokale Entwicklungsumgebung (localhost, *.test, *.local, ...)? */
     public function isLocalHost(): bool
     {

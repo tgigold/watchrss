@@ -16,6 +16,7 @@ use WatchRss\Http\Response;
 final class HttpTest extends TestCase
 {
     private const BASE = 'https://watchrss.de';
+    private const JSON = ['content-type' => 'application/json'];
 
     public function testPlainHttpIsRedirectedToConfiguredDomain(): void
     {
@@ -75,12 +76,66 @@ final class HttpTest extends TestCase
 
     public function testValidationErrorListsFieldTypesWithoutContent(): void
     {
-        $response = $this->handle('POST', '/api/resolve', body: ['input' => ['geheim']]);
+        $response = $this->handle('POST', '/api/resolve', body: ['input' => ['geheim']], headers: self::JSON);
         $payload  = json_decode($response->body, true);
 
         self::assertSame(422, $response->status);
         self::assertSame(['expected' => 'string', 'received' => 'array'], $payload['fields']['input']);
         self::assertStringNotContainsString('geheim', $response->body);
+    }
+
+    public function testApiPostWithoutJsonIsRejected(): void
+    {
+        $response = $this->handle('POST', '/api/feeds', body: ['title' => 'x'], headers: ['content-type' => 'application/x-www-form-urlencoded']);
+
+        self::assertSame(415, $response->status);
+    }
+
+    public function testCrossSiteApiPostIsRejected(): void
+    {
+        $response = $this->handle('POST', '/api/resolve', body: ['input' => '@x'], headers: self::JSON + ['origin' => 'https://evil.example']);
+
+        self::assertSame(403, $response->status);
+    }
+
+    public function testCrossSiteAdminPostIsRejected(): void
+    {
+        $response = $this->handle('POST', '/admin', body: ['token' => 'x'], headers: ['origin' => 'https://evil.example']);
+
+        self::assertSame(403, $response->status);
+    }
+
+    public function testSameOriginPostPasses(): void
+    {
+        $response = $this->handle('POST', '/api/resolve', body: ['input' => ''], headers: self::JSON + ['origin' => 'https://watchrss.de']);
+
+        self::assertSame(422, $response->status, 'Validierung statt CSRF-Abweisung');
+    }
+
+    public function testNullOriginIsRejected(): void
+    {
+        $response = $this->handle('POST', '/api/resolve', body: ['input' => ''], headers: self::JSON + ['origin' => 'null']);
+
+        self::assertSame(403, $response->status);
+    }
+
+    public function testEveryRouteDeclaresAccessAndEveryPostCsrf(): void
+    {
+        $routes = (new App(dirname(__DIR__, 2)))->router()->routes();
+
+        self::assertNotEmpty($routes);
+        foreach ($routes as $route) {
+            if (in_array('POST', $route['methods'], true)) {
+                self::assertNotNull($route['csrf'], 'POST ohne CSRF-Schutz: ' . $route['pattern']);
+            }
+        }
+    }
+
+    public function testAssetUrlsCarryAppVersion(): void
+    {
+        $response = $this->handle('GET', '/gibtsnicht');
+
+        self::assertMatchesRegularExpression('#/assets/css/app\.css\?v=' . preg_quote(App::VERSION, '#') . '-\d+#', $response->body);
     }
 
     public function testCronWithArrayKeyIsNotFound(): void
@@ -96,8 +151,9 @@ final class HttpTest extends TestCase
     }
 
     /**
-     * @param array<string,mixed> $query
-     * @param array<string,mixed> $body
+     * @param array<string,mixed>  $query
+     * @param array<string,mixed>  $body
+     * @param array<string,string> $headers
      */
     private function handle(
         string $method,
@@ -107,6 +163,7 @@ final class HttpTest extends TestCase
         string $base = self::BASE,
         array $query = [],
         array $body = [],
+        array $headers = [],
     ): Response {
         $request = new Request(
             method: $method,
@@ -114,6 +171,7 @@ final class HttpTest extends TestCase
             basePath: '',
             query: $query,
             body: $body,
+            headers: $headers,
             clientIp: '203.0.113.5',
             secure: $secure,
             host: $host,

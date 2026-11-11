@@ -2,8 +2,8 @@
 #
 # Achtung: Viele Hoster werten .htaccess-Dateien auch oberhalb des
 # Document-Roots aus. Ein pauschales "Require all denied" würde sich deshalb
-# nach /www vererben und die komplette Seite sperren. Gesperrt wird daher
-# gezielt nach Dateinamen - in /www existiert keine dieser Dateien, die Regel
+# nach /public vererben und die komplette Seite sperren. Gesperrt wird daher
+# gezielt nach Dateinamen - in /public existiert keine dieser Dateien, die Regel
 # ist dort also wirkungslos.
 
 <FilesMatch "(^\.|^(config\.inc\.php|config\.app\.inc\.php|bootstrap\.php|composer\.(json|lock)|schema\.sql|README\.md)$|\.(sql|md|log|lock|inc|dist|bak|orig|save|swp)$)">

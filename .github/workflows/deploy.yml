@@ -9,7 +9,7 @@ name: Deploy
 #             FTP_USERNAME
 #             FTP_PASSWORD
 #             FTP_SERVER_DIR  Zielverzeichnis, z. B. /watchrss/
-#                             (Projektstamm, NICHT www/)
+#                             (Projektstamm, NICHT public/)
 #
 # Es wird nur hochgeladen, nie gelöscht (kein --delete). Auf dem Server
 # bleiben damit config.inc.php, var/cache/ und alles andere unangetastet.
@@ -96,6 +96,7 @@ jobs:
               -x '^(README|CHANGELOG)[.]md$' \
               -x '^LICENSE$' \
               -x '^tests/' \
+              -x '^(package(-lock)?[.]json|playwright[.]config[.]js)$' \
               -x '^php(unit[.]xml|stan[.]neon)[.]dist$' \
               . \"$FTP_SERVER_DIR\"
           "

@@ -9,6 +9,9 @@ use WatchRss\Http\Controller\ApiController;
 use WatchRss\Http\Controller\CronController;
 use WatchRss\Http\Controller\FeedController;
 use WatchRss\Http\Controller\PageController;
+use WatchRss\Http\Controller\SetupController;
+use WatchRss\Http\Access;
+use WatchRss\Http\Csrf;
 use WatchRss\Http\Request;
 use WatchRss\Http\Response;
 use WatchRss\Http\Router;
@@ -27,6 +30,7 @@ use WatchRss\Service\Tracking\MatomoTracker;
 use WatchRss\Service\Tracking\TrackerInterface;
 use WatchRss\Service\Tracking\TrackingEvent;
 use WatchRss\Service\YouTubeFeedFetcher;
+use WatchRss\Support\CircuitBreaker;
 use WatchRss\Support\Database;
 use WatchRss\Support\FileCache;
 use WatchRss\Support\HttpClient;
@@ -41,14 +45,39 @@ use WatchRss\View\Renderer;
  */
 final class App
 {
+    /**
+     * Version nach Semantic Versioning. Wird beim Release zusammen mit
+     * CHANGELOG.md hochgezählt; Asset-URLs und User-Agents tragen sie.
+     */
+    public const VERSION = '1.0.0';
+
     /** @var array<string,object> */
     private array $instances = [];
 
-    public function __construct(public readonly string $rootPath, ?Database $database = null)
-    {
+    /** true = es gibt noch keine config.inc.php, nur das Setup läuft. */
+    public readonly bool $setupMode;
+
+    /** Wo das Setup die Konfiguration anlegt. */
+    public readonly string $configFile;
+
+    /** Datenverzeichnis (Setup-Code, Sperrdatei, Backups). */
+    public readonly string $dataDir;
+
+    public function __construct(
+        public readonly string $rootPath,
+        ?Database $database = null,
+        ?bool $setupMode = null,
+        ?string $configFile = null,
+        ?string $dataDir = null,
+    ) {
         if ($database !== null) {
             $this->instances[Database::class] = $database;
         }
+
+        // Die Zugangsdaten kommen aus config.inc.php - ohne sie läuft nur das Setup.
+        $this->setupMode  = $setupMode ?? !defined('DB_HOST');
+        $this->configFile = $configFile ?? $rootPath . '/config.inc.php';
+        $this->dataDir    = $dataDir ?? $rootPath . '/var';
     }
 
     /* ---------------------------------------------------------------------
@@ -67,7 +96,9 @@ final class App
 
     public function httpClient(): HttpClient
     {
-        return $this->singleton(HttpClient::class, static fn (): HttpClient => HttpClient::fromConfig());
+        return $this->singleton(HttpClient::class, fn (): HttpClient => HttpClient::fromConfig(
+            new CircuitBreaker($this->cache(), (int) BREAKER_THRESHOLD, (int) BREAKER_COOLDOWN_SECONDS)
+        ));
     }
 
     public function renderer(): Renderer
@@ -183,11 +214,15 @@ final class App
      * Meldet einen abgeschlossenen Aufruf an die Statistik.
      *
      * Wird bewusst erst NACH dem Senden der Antwort aufgerufen (siehe
-     * www/index.php): Der Besucher wartet nie auf Matomo. Was gemeldet wird
+     * public/index.php): Der Besucher wartet nie auf Matomo. Was gemeldet wird
      * und wie es anonymisiert ist, entscheidet TrackingEvent.
      */
     public function track(Request $request, Response $response): void
     {
+        if ($this->setupMode) {
+            return;
+        }
+
         try {
             $event = TrackingEvent::fromExchange($request, $response, $this->trackingSalt());
             if ($event !== null) {
@@ -237,25 +272,25 @@ final class App
             $admin  = new AdminController($this);
 
             // Oberfläche
-            $router->get('#^/$#', $page->home(...));
-            $router->get('#^/e/' . self::EDIT_TOKEN . '/?$#', $page->edit(...));
+            $router->get('#^/$#', $page->home(...), Access::Public);
+            $router->get('#^/e/' . self::EDIT_TOKEN . '/?$#', $page->edit(...), Access::SecretUrl);
 
             // Generierter Feed - mit und ohne .xml-Endung
-            $router->get('#^/f/' . self::FEED_TOKEN . '(?:\.xml)?$#', $feed->serve(...));
+            $router->get('#^/f/' . self::FEED_TOKEN . '(?:\.xml)?$#', $feed->serve(...), Access::Public);
 
             // Web-Trigger für den Abruf (Ersatz für einen Konsolen-Cron)
-            $router->get('#^/cron(?:/(?P<token>[A-Za-z0-9._-]{8,128}))?$#', $cron->run(...));
+            $router->get('#^/cron(?:/(?P<token>[A-Za-z0-9._-]{8,128}))?$#', $cron->run(...), Access::SecretUrl);
 
             // Wartung (Migrationen). Token nur im POST-Body, nie in der URL.
-            $router->get('#^/admin/?$#', $admin->show(...));
-            $router->post('#^/admin/?$#', $admin->submit(...));
+            $router->get('#^/admin/?$#', $admin->show(...), Access::Public);
+            $router->post('#^/admin/?$#', $admin->submit(...), Access::AdminToken, Csrf::SecretInBody);
 
             // JSON-API
-            $router->post('#^/api/resolve$#', $api->resolve(...));
-            $router->post('#^/api/feeds$#', $api->create(...));
-            $router->post('#^/api/feeds/' . self::EDIT_TOKEN . '$#', $api->update(...));
-            $router->get('#^/api/feeds/' . self::EDIT_TOKEN . '/preview$#', $api->preview(...));
-            $router->post('#^/api/feeds/' . self::EDIT_TOKEN . '/rotate$#', $api->rotate(...));
+            $router->post('#^/api/resolve$#', $api->resolve(...), Access::Public, Csrf::JsonBody);
+            $router->post('#^/api/feeds$#', $api->create(...), Access::Public, Csrf::JsonBody);
+            $router->post('#^/api/feeds/' . self::EDIT_TOKEN . '$#', $api->update(...), Access::SecretUrl, Csrf::JsonBody);
+            $router->get('#^/api/feeds/' . self::EDIT_TOKEN . '/preview$#', $api->preview(...), Access::SecretUrl);
+            $router->post('#^/api/feeds/' . self::EDIT_TOKEN . '/rotate$#', $api->rotate(...), Access::SecretUrl, Csrf::JsonBody);
 
             return $router;
         });
@@ -275,6 +310,11 @@ final class App
      */
     public function handle(Request $request): Response
     {
+        if ($this->setupMode) {
+            return (new SetupController($this))->handle($request)
+                ->withDefaultHeaders($this->securityHeaders($request));
+        }
+
         $response = $this->httpsRedirect($request) ?? $this->dispatch($request);
 
         return $response->withDefaultHeaders($this->securityHeaders($request));

@@ -98,3 +98,72 @@ jobs:
           WATCHRSS_TEST_MYSQL_USER: root
           WATCHRSS_TEST_MYSQL_PASS: root
         run: vendor/bin/phpunit --testsuite integration --fail-on-skipped
+
+  browser:
+    # Frontend im echten Browser (Playwright) gegen PHP-Server und eine
+    # Wegwerf-Datenbank. /api/resolve wird im Test abgefangen - kein
+    # Request geht zu YouTube.
+    name: Browser (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      db:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: watchrss_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.2'
+          extensions: curl, json, libxml, mbstring, pdo, pdo_mysql, simplexml, xmlwriter, zlib
+          tools: composer:v2
+          coverage: none
+
+      - name: Node einrichten
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: |
+          composer install --no-dev --no-interaction --no-progress
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Test-Installation anlegen
+        run: |
+          cat > config.inc.php <<'PHP'
+          <?php
+          define('DB_HOST', '127.0.0.1');
+          define('DB_PORT', '3306');
+          define('DB_NAME', 'watchrss_test');
+          define('DB_USER', 'root');
+          define('DB_PASS', 'root');
+          define('APP_BASE_URL', '');
+          PHP
+          php bin/install.php
+          mysql -h 127.0.0.1 -u root -proot watchrss_test -e "INSERT INTO channels (channel_id, title, handle, last_status) VALUES ('UCbrowsertestchannel0000', 'Browsertest-Kanal', 'browsertest', 'ok')"
+
+      - name: Browser-Tests
+        run: npx playwright test
+
+      - name: Fehlerbericht sichern
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

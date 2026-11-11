@@ -2,7 +2,7 @@
 /**
  * watchrss - Anwendungs-Konfiguration.
  *
- * Liegt bewusst ausserhalb von /www. Die MySQL-Zugangsdaten stehen weiterhin
+ * Liegt bewusst ausserhalb von /public. Die MySQL-Zugangsdaten stehen weiterhin
  * in config.inc.php; diese Datei enthält nur Anwendungs-Schalter. Alle Werte
  * sind mit defined()-Guards versehen, können also in config.inc.php oder per
  * Environment vorab überschrieben werden.
@@ -63,6 +63,14 @@ defined('HTTP_CONNECT_TIMEOUT') || define('HTTP_CONNECT_TIMEOUT', 8);
  * dauern.
  */
 defined('RESOLVE_BUDGET_SECONDS') || define('RESOLVE_BUDGET_SECONDS', 25);
+
+/**
+ * Circuit Breaker: Nach so vielen Komplettausfällen in Folge (Timeout,
+ * Netzwerkfehler, 5xx, 429) wird ein Dienst (z. B. YouTube) für
+ * BREAKER_COOLDOWN_SECONDS übersprungen. Ein einzelner Ausfall sperrt nichts.
+ */
+defined('BREAKER_THRESHOLD') || define('BREAKER_THRESHOLD', 5);
+defined('BREAKER_COOLDOWN_SECONDS') || define('BREAKER_COOLDOWN_SECONDS', 300);
 
 /* --------------------------------------------------------------------------
  * Abruf der Kanal-Feeds (bin/fetch.php)

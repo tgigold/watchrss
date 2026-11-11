@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WatchRss\View;
 
 use RuntimeException;
+use WatchRss\App;
 
 /**
  * Template-Renderer für schlichte PHP-Templates.
@@ -104,15 +105,18 @@ final class Renderer
     }
 
     /**
-     * URL zu einer statischen Datei inklusive Cache-Buster (Dateidatum).
+     * URL zu einer statischen Datei mit App-Version, damit Browser nach
+     * einem Update keine alten Dateien aus dem Cache nehmen. Das Dateidatum
+     * kommt dazu, damit auch Änderungen ohne Versionssprung (Entwicklung,
+     * Deploys zwischen zwei Releases) sofort ankommen.
      */
     public function asset(string $path): string
     {
-        $path = ltrim($path, '/');
-        $file = $this->templateDir . '/../www/' . $path;
-        $stamp = is_file($file) ? (string) filemtime($file) : '1';
+        $path  = ltrim($path, '/');
+        $file  = $this->templateDir . '/../public/' . $path;
+        $stamp = is_file($file) ? (string) filemtime($file) : '0';
 
-        return $this->url($path) . '?v=' . $stamp;
+        return $this->url($path) . '?v=' . rawurlencode(App::VERSION . '-' . $stamp);
     }
 
     /**
@@ -127,7 +131,7 @@ final class Renderer
      */
     public function imageSize(string $path): array
     {
-        $file = $this->templateDir . '/../www/' . ltrim($path, '/');
+        $file = $this->templateDir . '/../public/' . ltrim($path, '/');
         if (!is_file($file)) {
             return [0, 0];
         }

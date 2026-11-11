@@ -1,6 +1,6 @@
 <?php
 /**
- * watchrss - gemeinsamer Bootstrap für Web (www/index.php) und CLI (bin/*.php).
+ * watchrss - gemeinsamer Bootstrap für Web (public/index.php) und CLI (bin/*.php).
  *
  * Lädt Konfiguration + Autoloader und liefert den Service-Container zurück.
  */
@@ -14,10 +14,12 @@ if (version_compare(PHP_VERSION, '8.2.0', '<')) {
 $root = __DIR__;
 
 // Zugangsdaten und Anwendungs-Konfiguration (beide ausserhalb des Webroots).
-if (!is_file($root . '/config.inc.php')) {
-    exit('config.inc.php fehlt - bitte config.inc.sample.php kopieren und ausfüllen.');
+// Fehlt config.inc.php, startet im Browser das geführte Setup (App::$setupMode).
+if (is_file($root . '/config.inc.php')) {
+    require_once $root . '/config.inc.php';
+} elseif (PHP_SAPI === 'cli') {
+    exit("config.inc.php fehlt - im Browser einrichten (/setup) oder config.inc.sample.php kopieren und ausfüllen.\n");
 }
-require_once $root . '/config.inc.php';
 require_once $root . '/config.app.inc.php';
 
 if (!is_file($root . '/vendor/autoload.php')) {

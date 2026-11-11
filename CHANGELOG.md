@@ -42,6 +42,18 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   Fehlversuchen.
 - Integrationstests für Migrationen und Backup gegen MySQL 8.4 und
   MariaDB 11.4 in der CI.
+- **Geführtes Setup** unter `/setup` für Webhosting ohne Kommandozeile:
+  Setup-Code aus `var/setup-code.txt` (nur per FTP lesbar), Umgebungsprüfung,
+  Datenbank-Test, Tabellen und Migrationen, erzeugte Geheimnisse,
+  `config.inc.php`. Danach sperrt sich das Setup selbst.
+- Jede Route gibt ausdrücklich an, wer sie aufrufen darf (`Http\Access`),
+  jede POST-Route ihren CSRF-Schutz (`Http\Csrf`).
+- Circuit Breaker: Ein Dienst wird nach mehreren Komplettausfällen in Folge
+  eine Zeit lang übersprungen (`BREAKER_THRESHOLD`,
+  `BREAKER_COOLDOWN_SECONDS`).
+- `App::VERSION`; Asset-URLs und der Matomo-User-Agent tragen die Version.
+- Browser-Tests mit Playwright in der CI (`package.json`,
+  `package-lock.json`).
 - README-Abschnitt „Fair Use gegenüber YouTube“, inklusive der bewussten
   Ausnahme beim User-Agent.
 - `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
@@ -85,12 +97,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   beliebige IP vortäuschen und die Abrufbremsen umgehen.
 - Feed-, Editor- und API-Links werden nicht mehr aus dem `Host`-Header
   gebaut.
+- POST-Requests mit fremdem `Origin` werden mit 403 abgelehnt; die JSON-API
+  nimmt nur noch `Content-Type: application/json` an (sonst 415).
 
 - Composer-Plattform auf PHP 8.2 festgelegt.
 - `bin/migrate.php` nutzt das Migrationssystem; die bisherigen Schritte
   (Aufteilung von `feeds.token`) sind Migration `0001` und prüfen weiter
   selbst, ob sie nötig sind. `--finish` entfällt.
-- `bin/install.php` führt nach `schema.sql` die Migrationen aus.
+- `bin/install.php` führt nach `schema.sql` die Migrationen aus und nutzt
+  denselben Installer wie das Web-Setup.
+- **Web-Root heißt jetzt `public/` statt `www/`.** Document-Root beim
+  Hoster umstellen und danach den alten Ordner `www/` löschen.
 - Kaputte Einträge im Drossel-Cache gelten als „nichts bekannt“, statt zu
   Typfehlern zu führen.
 - Mehrfach angegebenes `--channel` in `bin/fetch.php` wird ignoriert statt

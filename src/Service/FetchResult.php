@@ -11,7 +11,7 @@ final class FetchResult
 {
     public function __construct(
         public readonly string $channelId,
-        public readonly string $status,     // ok | not_modified | error
+        public readonly string $status,     // ok | not_modified | error | skipped
         public readonly int $seen = 0,
         public readonly int $new = 0,
         public readonly ?string $message = null,
@@ -28,6 +28,7 @@ final class FetchResult
         return match ($this->status) {
             'ok'           => sprintf('%s: %d Einträge, %d neu', $this->channelId, $this->seen, $this->new),
             'not_modified' => sprintf('%s: unverändert (304)', $this->channelId),
+            'skipped'      => sprintf('%s: übersprungen - %s', $this->channelId, $this->message ?? 'Dienst gesperrt'),
             default        => sprintf('%s: FEHLER - %s', $this->channelId, $this->message ?? 'unbekannt'),
         };
     }

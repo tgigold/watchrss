@@ -1,0 +1,12 @@
+{
+  "name": "watchrss-browser-tests",
+  "private": true,
+  "description": "Browser-Tests für das Frontend von watchrss (nur Entwicklung/CI, wird nicht deployt)",
+  "license": "Unlicense",
+  "scripts": {
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}

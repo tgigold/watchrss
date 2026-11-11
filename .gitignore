@@ -12,6 +12,11 @@ config.local.php
 !/var/cache/.gitkeep
 /var/log/
 /var/backups/
+
+# Browser-Tests
+/node_modules/
+/test-results/
+/playwright-report/
 *.lock
 !composer.lock
 *.log
@@ -32,3 +37,5 @@ Thumbs.db
 # Claude Code (lokale Einstellungen)
 .claude/
 .phpunit.cache/
+/var/setup-code.txt
+/var/setup.lock

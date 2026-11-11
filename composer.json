@@ -29,7 +29,7 @@
     "scripts": {
         "db:install": "php bin/install.php",
         "feeds:fetch": "php bin/fetch.php",
-        "serve": "php -S 127.0.0.1:8080 -t www www/index.php"
+        "serve": "php -S 127.0.0.1:8080 -t public public/index.php"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",
