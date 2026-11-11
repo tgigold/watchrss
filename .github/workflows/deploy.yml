@@ -1,0 +1,69 @@
+name: Deploy
+
+# Lädt den Stand von main per FTPS auf den Server.
+#
+# Benötigt im Environment "production" (Settings → Environments):
+#   Secrets:  FTP_SERVER      Hostname, z. B. ftp.example.org
+#             FTP_USERNAME
+#             FTP_PASSWORD
+#             FTP_SERVER_DIR  Zielverzeichnis mit abschließendem Slash,
+#                             z. B. /watchrss/  (Projektstamm, NICHT www/)
+#
+# Auf dem Server bleiben unangetastet: config.inc.php, var/cache/.
+# Hochgeladen wird nur, was sich seit dem letzten Lauf geändert hat
+# (Abgleich über .ftp-deploy-sync-state.json auf dem Server).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, json, libxml, mbstring, pdo, pdo_mysql, simplexml, xmlwriter
+          tools: composer:v2
+          coverage: none
+
+      - name: Syntax prüfen
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Autoloader erzeugen
+        run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+
+      - name: Per FTPS hochladen
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          protocol: ftps
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            .claude/**
+            **/.DS_Store
+            config.inc.php
+            var/cache/**
+            README.md
+            LICENSE

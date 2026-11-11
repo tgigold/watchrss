@@ -135,6 +135,22 @@ die Verbindung kappt – der Rest kommt beim nächsten Aufruf dran. Ein
 
 ---
 
+## Deployment
+
+Jeder Push auf `main` wird per GitHub Actions (`.github/workflows/deploy.yml`)
+über FTPS auf den Server geladen; manuell auslösbar unter *Actions → Deploy →
+Run workflow*. Der Workflow erzeugt vorher den Autoloader (`composer install`).
+
+Einmalig einrichten: *Settings → Environments → `production`* anlegen
+(Deployment branches: nur `main`) und dort die Secrets `FTP_SERVER`,
+`FTP_USERNAME`, `FTP_PASSWORD` und `FTP_SERVER_DIR` (Projektstamm mit
+abschließendem `/`) hinterlegen.
+
+`config.inc.php` und `var/cache/` werden nie hochgeladen oder gelöscht; die
+Konfiguration auf dem Server wird einmalig von Hand angelegt.
+
+---
+
 ## Konfiguration
 
 | Datei | Inhalt |
