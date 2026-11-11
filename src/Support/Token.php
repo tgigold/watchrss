@@ -59,6 +59,15 @@ final class Token
         return (bool) preg_match('/^[A-Za-z0-9]{16,64}$/', $token);
     }
 
+    /**
+     * So wird der geheime Edit-Token gespeichert: nur als SHA-256-Hash.
+     * Muss zu SHA2(token, 256) in MySQL passen (Migration 0002).
+     */
+    public static function hash(string $token): string
+    {
+        return hash('sha256', $token);
+    }
+
     public static function isValidFeed(string $token): bool
     {
         return (bool) preg_match('/^[A-Za-z0-9]{6,32}$/', $token);

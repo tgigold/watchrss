@@ -39,7 +39,8 @@ final class PageController
      */
     public function edit(Request $request, array $params): Response
     {
-        $feed = $this->app->feeds()->findByEditToken($params['token'] ?? '');
+        $token = $params['token'] ?? '';
+        $feed  = $this->app->feeds()->findByEditToken($token);
 
         if ($feed === null) {
             return Response::html($this->app->renderer()->page('error', [
@@ -57,6 +58,8 @@ final class PageController
             'pageTitle'   => $feed->title . ' – watchrss',
             'noindex'     => true,
             'feed'        => $feed,
+            // Klartext aus der URL - in der Datenbank steht nur der Hash.
+            'editToken'   => $token,
             'preview'     => $this->app->feedService()->preview($feed, 24),
             'ttlChoices'  => $this->ttlChoices(),
             'defaultTtl'  => $feed->ttlMinutes,

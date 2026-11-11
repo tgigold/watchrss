@@ -56,12 +56,49 @@ final class FeedService
     }
 
     /**
-     * Legt einen Feed an oder aktualisiert einen bestehenden.
+     * Legt einen Feed an. Der Edit-Token kommt im Klartext genau hier
+     * einmal zurück - gespeichert wird nur sein Hash.
+     *
+     * @param  array<string,mixed> $payload Rohdaten aus der JSON-API
+     * @return array{feed:Feed,editToken:string}
+     * @throws ValidationException
+     */
+    public function create(array $payload): array
+    {
+        $values = $this->validatePayload($payload);
+
+        return $this->feeds->create(
+            $values['title'],
+            $values['channels'],
+            $values['ttlMinutes'],
+            $values['maxItems'],
+            $values['prefixTitles'],
+        );
+    }
+
+    /**
+     * Aktualisiert einen bestehenden Feed.
      *
      * @param  array<string,mixed> $payload Rohdaten aus der JSON-API
      * @throws ValidationException
      */
-    public function save(?Feed $existing, array $payload): Feed
+    public function update(Feed $existing, array $payload): Feed
+    {
+        $values = $this->validatePayload($payload);
+        $id     = $existing->id ?? 0;
+
+        $this->feeds->updateSettings($id, $values['title'], $values['ttlMinutes'], $values['maxItems'], $values['prefixTitles']);
+        $this->feeds->syncChannels($id, $values['channels']);
+
+        return $this->feeds->findById($id) ?? $existing;
+    }
+
+    /**
+     * @param  array<string,mixed> $payload
+     * @return array{title:string,ttlMinutes:int,maxItems:int,prefixTitles:bool,channels:list<array{channel_ref:int,include_long:bool,include_shorts:bool}>}
+     * @throws ValidationException
+     */
+    private function validatePayload(array $payload): array
     {
         // Erst alle Typen prüfen, dann erst Kanäle auflösen (kostet Requests).
         $title        = $this->validateTitle($payload);
@@ -71,14 +108,13 @@ final class FeedService
         $entries      = $this->validateChannelEntries($payload);
         $channels     = $this->resolveChannels($entries);
 
-        if ($existing === null) {
-            return $this->feeds->create($title, $channels, $ttlMinutes, $maxItems, $prefixTitles);
-        }
-
-        $this->feeds->updateSettings($existing->id ?? 0, $title, $ttlMinutes, $maxItems, $prefixTitles);
-        $this->feeds->syncChannels($existing->id ?? 0, $channels);
-
-        return $this->feeds->findByEditToken($existing->editToken) ?? $existing;
+        return [
+            'title'        => $title,
+            'ttlMinutes'   => $ttlMinutes,
+            'maxItems'     => $maxItems,
+            'prefixTitles' => $prefixTitles,
+            'channels'     => $channels,
+        ];
     }
 
     /**

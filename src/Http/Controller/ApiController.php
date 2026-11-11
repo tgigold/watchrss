@@ -79,14 +79,16 @@ final class ApiController
     public function create(Request $request): Response
     {
         try {
-            $feed = $this->app->feedService()->save(null, $request->body);
+            $created = $this->app->feedService()->create($request->body);
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (ResolveException $e) {
             return Response::json(['error' => $e->getMessage()], 422);
         }
 
-        return Response::json($this->feedPayload($feed, $request), 201);
+        // Einzige Stelle, an der der Server den Edit-Token von sich aus
+        // herausgibt - gespeichert ist nur sein Hash.
+        return Response::json($this->feedPayload($created['feed'], $created['editToken'], $request), 201);
     }
 
     /**
@@ -96,20 +98,21 @@ final class ApiController
      */
     public function update(Request $request, array $params): Response
     {
-        $feed = $this->app->feeds()->findByEditToken($params['token'] ?? '');
+        $token = $params['token'] ?? '';
+        $feed  = $this->app->feeds()->findByEditToken($token);
         if ($feed === null) {
             return Response::json(['error' => 'Feed nicht gefunden.'], 404);
         }
 
         try {
-            $feed = $this->app->feedService()->save($feed, $request->body);
+            $feed = $this->app->feedService()->update($feed, $request->body);
         } catch (ValidationException $e) {
             return $this->validationError($e);
         } catch (ResolveException $e) {
             return Response::json(['error' => $e->getMessage()], 422);
         }
 
-        return Response::json($this->feedPayload($feed, $request));
+        return Response::json($this->feedPayload($feed, $token, $request));
     }
 
     /**
@@ -138,19 +141,20 @@ final class ApiController
      */
     public function rotate(Request $request, array $params): Response
     {
-        $feed = $this->app->feeds()->findByEditToken($params['token'] ?? '');
+        $token = $params['token'] ?? '';
+        $feed  = $this->app->feeds()->findByEditToken($token);
         if ($feed === null || $feed->id === null) {
             return Response::json(['error' => 'Feed nicht gefunden.'], 404);
         }
 
         $this->app->feeds()->rotateFeedToken($feed->id);
 
-        $updated = $this->app->feeds()->findByEditToken($feed->editToken);
+        $updated = $this->app->feeds()->findById($feed->id);
         if ($updated === null) {
             return Response::json(['error' => 'Feed konnte nicht neu geladen werden.'], 500);
         }
 
-        return Response::json($this->feedPayload($updated, $request));
+        return Response::json($this->feedPayload($updated, $token, $request));
     }
 
     /**
@@ -169,20 +173,23 @@ final class ApiController
      * und die künftigen API-Endpunkte (die hängen am Edit-Token, den das
      * Frontend beim Anlegen ja noch nicht kennt).
      *
+     * $editToken ist der Klartext-Token: beim Anlegen frisch erzeugt, sonst
+     * der aus der Anfrage-URL. Aus der Datenbank lässt er sich nicht lesen.
+     *
      * @return array<string,mixed>
      */
-    private function feedPayload(Feed $feed, Request $request): array
+    private function feedPayload(Feed $feed, string $editToken, Request $request): array
     {
         $base = $request->baseUrl();
-        $api  = $base . '/api/feeds/' . $feed->editToken;
+        $api  = $base . '/api/feeds/' . $editToken;
 
         return [
-            'edit_token' => $feed->editToken,
+            'edit_token' => $editToken,
             'feed_token' => $feed->feedToken,
             // Ohne .xml - kurz und trotzdem gültig; mit .xml funktioniert
             // dieselbe Adresse ebenfalls.
             'feed_url'   => $base . '/f/' . $feed->feedToken,
-            'edit_url'   => $base . '/e/' . $feed->editToken,
+            'edit_url'   => $base . '/e/' . $editToken,
             'api'        => [
                 'update'  => $api,
                 'preview' => $api . '/preview',

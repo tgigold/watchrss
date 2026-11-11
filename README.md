@@ -456,8 +456,15 @@ Einstellungen.
 
 | | Länge | Zeichenvorrat | steht in | Risiko bei Kenntnis |
 |---|---|---|---|---|
-| `edit_token` | 32 | base62 (~190 Bit) | nur im Bearbeiten-Link | voller Zugriff |
+| `edit_token` | 32 | base62 (~190 Bit) | nur im Bearbeiten-Link; in der DB nur als SHA-256 | voller Zugriff |
 | `feed_token` | 10 | 56 Zeichen ohne `0/O`, `1/l/I` (3 · 10¹⁷) | in der RSS-Adresse | man sieht die Kanalliste |
+
+**Der Bearbeiten-Token wird nie gespeichert**, nur sein SHA-256-Hash
+(`feeds.edit_token_hash`). Der Server zeigt ihn genau einmal – in der Antwort
+auf das Anlegen – und kennt ihn danach nur, wenn er in einer Anfrage-URL
+ankommt. Ein Datenbank-Leak verrät also keine Bearbeiten-Links. Die Kehrseite:
+**Ein verlorener Bearbeiten-Link lässt sich nicht wiederherstellen**, auch
+nicht vom Betreiber.
 
 Aus dem einen folgt nicht der andere. Der öffentliche Token darf deshalb kurz
 sein – er schützt nur sich selbst. Der Zeichenvorrat lässt die Paare weg, die

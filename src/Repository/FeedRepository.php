@@ -39,7 +39,7 @@ final class FeedRepository
             return null;
         }
 
-        return $this->findBy('edit_token', $token, $withChannels);
+        return $this->findBy('edit_token_hash', Token::hash($token), $withChannels);
     }
 
     /**
@@ -55,7 +55,15 @@ final class FeedRepository
     }
 
     /**
-     * @param string $column 'edit_token' oder 'feed_token' - niemals aus
+     * Feed über die interne ID laden (nach dem Speichern).
+     */
+    public function findById(int $id, bool $withChannels = true): ?Feed
+    {
+        return $this->findBy('id', (string) $id, $withChannels);
+    }
+
+    /**
+     * @param string $column 'id', 'edit_token_hash' oder 'feed_token' - niemals aus
      *                       Nutzereingaben, nur aus den Methoden oben.
      */
     private function findBy(string $column, string $value, bool $withChannels): ?Feed
@@ -99,7 +107,11 @@ final class FeedRepository
      * Legt einen neuen Feed an. Beide Tokens werden hier erzeugt; bei der
      * (astronomisch unwahrscheinlichen) Kollision wird neu gewürfelt.
      *
-     * @param list<array{channel_ref:int,include_long:bool,include_shorts:bool}> $channels
+     * Der Edit-Token wird nur gehasht gespeichert. Der Klartext kommt genau
+     * einmal zurück - danach kennt ihn nur noch der Nutzer.
+     *
+     * @param  list<array{channel_ref:int,include_long:bool,include_shorts:bool}> $channels
+     * @return array{feed:Feed,editToken:string}
      */
     public function create(
         string $title,
@@ -108,7 +120,7 @@ final class FeedRepository
         int $maxItems,
         bool $prefixTitles,
         ?int $userId = null,
-    ): Feed {
+    ): array {
         $pdo = $this->db->pdo();
 
         for ($attempt = 0; $attempt < self::TOKEN_ATTEMPTS; $attempt++) {
@@ -117,10 +129,10 @@ final class FeedRepository
 
             try {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO feeds (edit_token, feed_token, title, user_id, ttl_minutes, max_items, prefix_titles)
+                    'INSERT INTO feeds (edit_token_hash, feed_token, title, user_id, ttl_minutes, max_items, prefix_titles)
                      VALUES (?, ?, ?, ?, ?, ?, ?)'
                 );
-                $stmt->execute([$editToken, $feedToken, $title, $userId, $ttlMinutes, $maxItems, (int) $prefixTitles]);
+                $stmt->execute([Token::hash($editToken), $feedToken, $title, $userId, $ttlMinutes, $maxItems, (int) $prefixTitles]);
             } catch (PDOException $e) {
                 if ($this->isDuplicateKey($e)) {
                     continue;
@@ -131,8 +143,10 @@ final class FeedRepository
             $feedId = (int) $pdo->lastInsertId();
             $this->syncChannels($feedId, $channels);
 
-            return $this->findByEditToken($editToken)
+            $feed = $this->findById($feedId)
                 ?? throw new RuntimeException('Feed konnte nicht geladen werden.');
+
+            return ['feed' => $feed, 'editToken' => $editToken];
         }
 
         throw new RuntimeException('Es konnte kein freier Token erzeugt werden.');

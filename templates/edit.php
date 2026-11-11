@@ -4,13 +4,14 @@
  *
  * @var WatchRss\View\Renderer  $this
  * @var WatchRss\Model\Feed     $feed
+ * @var string                  $editToken   Klartext aus der URL (DB kennt nur den Hash)
  * @var array<int,array>        $preview
  * @var array<int,string>       $ttlChoices
  * @var int                     $defaultTtl
  * @var int                     $maxChannels
  */
 $state = [
-    'editToken'   => $feed->editToken,
+    'editToken'   => $editToken,
     'maxChannels' => $maxChannels,
     'channels'    => array_map(
         static fn ($feedChannel): array => $feedChannel->toArray(),
@@ -19,13 +20,13 @@ $state = [
     'urls'        => [
         // Ohne .xml - kurz; mit .xml funktioniert dieselbe Adresse ebenfalls.
         'feed' => $this->url('/f/' . $feed->feedToken),
-        'edit' => $this->url('/e/' . $feed->editToken),
+        'edit' => $this->url('/e/' . $editToken),
     ],
     'endpoints'   => [
         'resolve' => $this->url('/api/resolve'),
-        'update'  => $this->url('/api/feeds/' . $feed->editToken),
-        'preview' => $this->url('/api/feeds/' . $feed->editToken . '/preview'),
-        'rotate'  => $this->url('/api/feeds/' . $feed->editToken . '/rotate'),
+        'update'  => $this->url('/api/feeds/' . $editToken),
+        'preview' => $this->url('/api/feeds/' . $editToken . '/preview'),
+        'rotate'  => $this->url('/api/feeds/' . $editToken . '/rotate'),
     ],
 ];
 ?>

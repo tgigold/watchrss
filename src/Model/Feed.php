@@ -14,8 +14,11 @@ final class Feed
      */
     public function __construct(
         public readonly ?int $id,
-        /** Geheim - nur im Bearbeiten-Link. */
-        public readonly string $editToken,
+        /**
+         * SHA-256 des geheimen Bearbeiten-Tokens. Der Token selbst wird nie
+         * gespeichert - er steht nur im Link des Nutzers.
+         */
+        public readonly string $editTokenHash,
         /** Öffentlich - steht in der RSS-Adresse. */
         public readonly string $feedToken,
         public readonly string $title = 'watchrss',
@@ -39,7 +42,7 @@ final class Feed
     {
         return new self(
             id: isset($row['id']) ? (int) $row['id'] : null,
-            editToken: (string) $row['edit_token'],
+            editTokenHash: (string) $row['edit_token_hash'],
             feedToken: (string) $row['feed_token'],
             title: (string) ($row['title'] ?? 'watchrss'),
             userId: isset($row['user_id']) ? (int) $row['user_id'] : null,
@@ -76,7 +79,6 @@ final class Feed
     public function toArray(): array
     {
         return [
-            'edit_token'    => $this->editToken,
             'feed_token'    => $this->feedToken,
             'title'         => $this->title,
             'ttl_minutes'   => $this->ttlMinutes,

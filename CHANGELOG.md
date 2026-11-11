@@ -61,6 +61,13 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Sicherheit
 
+- **Bearbeiten-Tokens werden nur noch als SHA-256-Hash gespeichert**
+  (`feeds.edit_token_hash`, Migration `0002`). Der Klartext wird genau einmal
+  beim Anlegen ausgeliefert. Bestehende Bearbeiten-Links funktionieren
+  weiter; ein verlorener Link lässt sich nicht mehr aus der Datenbank
+  wiederherstellen. **Nach dem Update Migration 0002 ausführen** (`/admin`
+  oder `php bin/migrate.php`).
+
 - API-Eingaben werden explizit auf Typ, gültiges UTF-8 und Grenzen geprüft
   (`Support\Input`). Ein Array statt Text wird mit 422 abgelehnt, statt als
   „Array“ gespeichert zu werden.

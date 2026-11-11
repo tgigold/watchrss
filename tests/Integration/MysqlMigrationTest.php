@@ -10,6 +10,7 @@ use WatchRss\Migration\Migrator;
 use WatchRss\Migration\Schema;
 use WatchRss\Migration\SqlDumpBackup;
 use WatchRss\Migration\SqlFile;
+use WatchRss\Support\Token;
 
 /**
  * Migrationen und Backup gegen ein echtes MySQL/MariaDB.
@@ -53,7 +54,7 @@ final class MysqlMigrationTest extends TestCase
 
         $result = $this->migrator(withBackup: false)->migrate();
 
-        self::assertSame([1], array_column($result['applied'], 'version'));
+        self::assertSame([1, 2], array_column($result['applied'], 'version'));
         self::assertStringContainsString('nichts zu tun', $result['applied'][0]['result']);
         $this->assertCurrentFeedsSchema();
     }
@@ -70,9 +71,10 @@ final class MysqlMigrationTest extends TestCase
         self::assertFileExists($result['backup']);
         $this->assertCurrentFeedsSchema();
 
-        $rows = $this->rows('SELECT edit_token, feed_token, title FROM feeds ORDER BY id');
-        self::assertSame('legacytokenAAAAAAAAAAAAAAAAAAAAA', $rows[0]['edit_token']);
-        self::assertSame('legacytokenBBBBBBBBBBBBBBBBBBBBB', $rows[1]['edit_token']);
+        // Alte Bearbeiten-Links funktionieren weiter: Hash = sha256(Token).
+        $rows = $this->rows('SELECT edit_token_hash, feed_token, title FROM feeds ORDER BY id');
+        self::assertSame(Token::hash('legacytokenAAAAAAAAAAAAAAAAAAAAA'), $rows[0]['edit_token_hash']);
+        self::assertSame(Token::hash('legacytokenBBBBBBBBBBBBBBBBBBBBB'), $rows[1]['edit_token_hash']);
         self::assertSame(10, strlen((string) $rows[0]['feed_token']));
         self::assertNotSame($rows[0]['feed_token'], $rows[1]['feed_token']);
         self::assertSame([], $this->migrator(withBackup: true)->pending());
@@ -100,8 +102,8 @@ final class MysqlMigrationTest extends TestCase
             [['token' => 'legacytokenCCCCCCCCCCCCCCCCCCCCC', 'title' => 'Ümlaut "quote" \'single\' 😀']],
             $this->rows('SELECT token, title FROM feeds')
         );
-        // Stand vor dem Lauf: Migration 0001 noch nicht eingetragen.
-        self::assertSame([1], $this->migrator(withBackup: false)->pending());
+        // Stand vor dem Lauf: keine Migration eingetragen.
+        self::assertSame([1, 2], $this->migrator(withBackup: false)->pending());
     }
 
     private function migrator(bool $withBackup): Migrator
@@ -139,7 +141,9 @@ final class MysqlMigrationTest extends TestCase
     {
         $schema = new Schema($this->pdo);
         self::assertFalse($schema->hasColumn('feeds', 'token'));
-        self::assertTrue($schema->isNotNull('feeds', 'edit_token'));
+        self::assertFalse($schema->hasColumn('feeds', 'edit_token'), 'Klartext-Token darf nicht mehr gespeichert sein');
+        self::assertTrue($schema->isNotNull('feeds', 'edit_token_hash'));
+        self::assertTrue($schema->hasIndex('feeds', 'uniq_feeds_edit_token_hash'));
         self::assertTrue($schema->isNotNull('feeds', 'feed_token'));
         self::assertTrue($schema->hasIndex('feeds', 'uniq_feeds_feed_token'));
     }
