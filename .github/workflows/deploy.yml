@@ -3,7 +3,9 @@ name: Deploy
 # Lädt den Stand von main per FTPS (lftp) auf den Server.
 #
 # Benötigt im Environment "production" (Settings → Environments):
-#   Secrets:  FTP_SERVER      Hostname, z. B. w0123456.kasserver.com
+#   Secrets:  FTP_SERVER      Server-Name des Hosters, z. B. w0123456.kasserver.com
+#                             (nicht die eigene Domain - sonst passt das
+#                             TLS-Zertifikat nicht)
 #             FTP_USERNAME
 #             FTP_PASSWORD
 #             FTP_SERVER_DIR  Zielverzeichnis, z. B. /watchrss/
@@ -62,6 +64,13 @@ jobs:
           LFTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
         run: |
+          # Ohne Zielverzeichnis landet alles in der Wurzel des FTP-Zugangs.
+          # Ist der FTP-Benutzer schon auf das Projektverzeichnis beschränkt,
+          # FTP_SERVER_DIR auf "./" setzen.
+          if [ -z "$FTP_SERVER_DIR" ]; then
+            echo "::error::Secret FTP_SERVER_DIR fehlt oder ist leer."
+            exit 1
+          fi
           lftp -c "
             set cmd:fail-exit true
             set ftp:ssl-force true
