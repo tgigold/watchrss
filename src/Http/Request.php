@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace WatchRss\Http;
 
+use RuntimeException;
+use WatchRss\Support\IpRange;
+
 /**
  * Sehr schlanke Request-Abstraktion.
  *
@@ -65,6 +68,10 @@ final class Request
             }
         }
 
+        $trustedProxies = IpRange::parseList(defined('TRUSTED_PROXIES') ? (string) TRUSTED_PROXIES : '');
+        $remoteAddr     = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        $viaProxy       = $trustedProxies !== [] && IpRange::matchesAny($remoteAddr, $trustedProxies);
+
         return new self(
             method: $method,
             path: $path,
@@ -72,8 +79,8 @@ final class Request
             query: $_GET,
             body: self::parseBody($headers),
             headers: $headers,
-            clientIp: self::detectClientIp(),
-            secure: self::detectHttps(),
+            clientIp: self::detectClientIp($remoteAddr, $viaProxy, $trustedProxies),
+            secure: self::detectHttps($viaProxy),
             host: (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'),
         );
     }
@@ -99,14 +106,38 @@ final class Request
             || str_contains($this->header('content-type') ?? '', 'application/json');
     }
 
-    /** Absolute Basis-URL der Installation, z. B. "https://watchrss.de". */
+    /**
+     * Absolute Basis-URL der Installation, z. B. "https://watchrss.de".
+     *
+     * Kommt immer aus APP_BASE_URL, nie aus dem Host-Header - sonst könnte
+     * ein Client fremde Domains in Feed- und Editor-Links schmuggeln. Nur
+     * bei lokaler Entwicklung (localhost, *.test, ...) darf sie fehlen.
+     */
     public function baseUrl(): string
     {
         if (defined('APP_BASE_URL') && APP_BASE_URL !== '') {
             return rtrim((string) APP_BASE_URL, '/');
         }
 
-        return ($this->secure ? 'https://' : 'http://') . $this->host . $this->basePath;
+        if ($this->isLocalHost()) {
+            return ($this->secure ? 'https://' : 'http://') . $this->host . $this->basePath;
+        }
+
+        throw new RuntimeException('APP_BASE_URL ist nicht gesetzt (config.inc.php).');
+    }
+
+    /** Lokale Entwicklungsumgebung (localhost, *.test, *.local, ...)? */
+    public function isLocalHost(): bool
+    {
+        $host = strtolower((string) parse_url('http://' . $this->host, PHP_URL_HOST));
+        $host = trim($host, '[]');
+
+        return $host === 'localhost'
+            || $host === '127.0.0.1'
+            || $host === '::1'
+            || str_ends_with($host, '.local')
+            || str_ends_with($host, '.test')
+            || str_ends_with($host, '.localhost');
     }
 
     /**
@@ -140,28 +171,45 @@ final class Request
     }
 
     /**
-     * Client-IP - hinter Proxys wird X-Forwarded-For berücksichtigt.
-     * Wird ausschließlich für die Abruf-Bremse benutzt (gehasht).
+     * Client-IP für Abruf-Bremse und Statistik (beides nur gehasht).
+     *
+     * X-Forwarded-For zählt nur, wenn der Request von einem Proxy aus
+     * TRUSTED_PROXIES kommt - sonst könnte jeder Client sich per Header eine
+     * beliebige IP geben und damit die Bremsen umgehen. Gelesen wird von
+     * rechts: Der erste Eintrag, der kein eigener Proxy ist, ist der Client.
+     *
+     * @param list<string> $trustedProxies
      */
-    private static function detectClientIp(): string
+    private static function detectClientIp(string $remoteAddr, bool $viaProxy, array $trustedProxies): string
     {
+        if (!$viaProxy) {
+            return $remoteAddr;
+        }
+
         $forwarded = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
-        if (is_string($forwarded) && $forwarded !== '') {
-            $first = trim(explode(',', $forwarded)[0]);
-            if (filter_var($first, FILTER_VALIDATE_IP) !== false) {
-                return $first;
+        if (!is_string($forwarded) || $forwarded === '') {
+            return $remoteAddr;
+        }
+
+        foreach (array_reverse(array_map('trim', explode(',', $forwarded))) as $candidate) {
+            if (filter_var($candidate, FILTER_VALIDATE_IP) === false) {
+                break;
+            }
+            if (!IpRange::matchesAny($candidate, $trustedProxies)) {
+                return $candidate;
             }
         }
 
-        return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        return $remoteAddr;
     }
 
-    private static function detectHttps(): bool
+    /** X-Forwarded-Proto zählt nur von einem vertrauenswürdigen Proxy. */
+    private static function detectHttps(bool $viaProxy): bool
     {
         if (($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? 'off') !== 'off') {
             return true;
         }
-        if (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+        if ($viaProxy && strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https') {
             return true;
         }
 

@@ -231,16 +231,76 @@ final class App
     }
 
     /**
+     * Content Security Policy: nur eigene Skripte und Styles, Bilder
+     * zusätzlich von den YouTube-CDNs (Vorschaubilder, Kanal-Avatare).
+     */
+    private const CSP = "default-src 'self'; script-src 'self'; style-src 'self'; "
+        . "img-src 'self' data: https://*.ytimg.com https://*.ggpht.com https://*.googleusercontent.com; "
+        . "connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; "
+        . "form-action 'self'; frame-ancestors 'none'";
+
+    /**
      * Verarbeitet einen Request und liefert die Antwort.
      */
     public function handle(Request $request): Response
     {
-        $this->renderer()->share([
-            'appName' => (string) APP_NAME,
-            'baseUrl' => $request->baseUrl(),
-        ]);
+        $response = $this->httpsRedirect($request) ?? $this->dispatch($request);
 
+        return $response->withDefaultHeaders($this->securityHeaders($request));
+    }
+
+    /**
+     * Unverschlüsselte Aufrufe auf HTTPS umleiten - immer auf die Domain
+     * aus APP_BASE_URL, nie auf den Host-Header. Greift nur, wenn
+     * APP_BASE_URL eine https-Adresse ist (lokal also nie).
+     */
+    private function httpsRedirect(Request $request): ?Response
+    {
+        $base = defined('APP_BASE_URL') ? rtrim((string) APP_BASE_URL, '/') : '';
+        if ($request->secure || !str_starts_with($base, 'https://')) {
+            return null;
+        }
+
+        $target = $base . $request->path;
+        if ($request->query !== []) {
+            $target .= '?' . http_build_query($request->query);
+        }
+
+        // 308 erhält Methode und Body (POST), 301 ist für GET am verbreitetsten.
+        $status = in_array($request->method, ['GET', 'HEAD'], true) ? 301 : 308;
+
+        return Response::redirect($target, $status);
+    }
+
+    /**
+     * @return array<string,string>
+     */
+    private function securityHeaders(Request $request): array
+    {
+        $headers = [
+            'Content-Security-Policy' => self::CSP,
+            'X-Frame-Options'         => 'DENY',
+            'X-Content-Type-Options'  => 'nosniff',
+            // Fremde Server sehen nur die Domain, nie den Pfad (der enthält
+            // im Editor den geheimen Token).
+            'Referrer-Policy'         => 'strict-origin-when-cross-origin',
+        ];
+
+        if ($request->secure) {
+            $headers['Strict-Transport-Security'] = 'max-age=31536000';
+        }
+
+        return $headers;
+    }
+
+    private function dispatch(Request $request): Response
+    {
         try {
+            $this->renderer()->share([
+                'appName' => (string) APP_NAME,
+                'baseUrl' => $request->baseUrl(),
+            ]);
+
             return $this->router()->dispatch($request, function (Request $request): Response {
                 if (str_starts_with($request->path, '/api/')) {
                     return Response::json(['error' => 'Nicht gefunden.'], 404);

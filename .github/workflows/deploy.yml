@@ -12,7 +12,7 @@ name: Deploy
 #                             (Projektstamm, NICHT www/)
 #
 # Es wird nur hochgeladen, nie gelöscht (kein --delete). Auf dem Server
-# bleiben damit config.inc.php, var/ und alles andere unangetastet.
+# bleiben damit config.inc.php, var/cache/ und alles andere unangetastet.
 # lftp statt FTP-Deploy-Action, weil deren FTP-Bibliothek beim FTPS-
 # Datenkanal von all-inkl mit ECONNRESET abbricht.
 
@@ -52,7 +52,10 @@ jobs:
         run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
 
       - name: Autoloader erzeugen
-        run: composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+        run: |
+          composer install --no-dev --no-interaction --no-progress --optimize-autoloader
+          # vendor/ ist nicht im Repo - Zugriffssperre wie für src/ & Co.
+          cp src/.htaccess vendor/.htaccess
 
       - name: lftp installieren
         run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
@@ -86,7 +89,7 @@ jobs:
               -x '^[.]claude/' \
               -x '(^|/)[.]DS_Store$' \
               -x '^config[.]inc[.]php$' \
-              -x '^var/' \
+              -x '^var/cache/' \
               -x '^(README|CHANGELOG)[.]md$' \
               -x '^LICENSE$' \
               . \"$FTP_SERVER_DIR\"

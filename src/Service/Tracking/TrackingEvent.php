@@ -155,14 +155,7 @@ final class TrackingEvent
             return true;
         }
 
-        $host = strtolower((string) parse_url('http://' . $request->host, PHP_URL_HOST));
-
-        return $host === 'localhost'
-            || $host === '127.0.0.1'
-            || $host === '::1'
-            || str_ends_with($host, '.local')
-            || str_ends_with($host, '.test')
-            || str_ends_with($host, '.localhost');
+        return $request->isLocalHost();
     }
 
     /** Respektiert Do Not Track und Global Privacy Control. */

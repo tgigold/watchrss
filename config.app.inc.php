@@ -18,12 +18,20 @@ declare(strict_types=1);
 defined('APP_NAME') || define('APP_NAME', 'watchrss');
 
 /**
- * Oeffentliche Basis-URL ohne abschliessenden Slash, z. B. "https://watchrss.de".
- * Leer lassen = automatisch aus dem Request ermitteln (funktioniert auch in
- * Unterverzeichnissen). Für den Cron/CLI-Kontext sollte sie gesetzt sein,
- * damit generierte Links stimmen.
+ * Öffentliche Basis-URL ohne abschließenden Slash, z. B. "https://watchrss.de".
+ * PFLICHT im Betrieb - gehört in die config.inc.php. Alle Links und der
+ * HTTPS-Redirect nutzen diese Adresse, nie den Host-Header des Requests.
+ * Leer ist nur bei lokaler Entwicklung erlaubt (localhost, *.test, ...).
  */
 defined('APP_BASE_URL') || define('APP_BASE_URL', '');
+
+/**
+ * Vertrauenswürdige Reverse-Proxys, kommagetrennt (IPs oder CIDR-Netze),
+ * z. B. "10.0.0.0/8, 2001:db8::/32". Nur von diesen Adressen werden
+ * X-Forwarded-For und X-Forwarded-Proto übernommen. Leer = keine Proxys,
+ * die IP kommt dann immer aus REMOTE_ADDR (Normalfall bei Shared Hosting).
+ */
+defined('TRUSTED_PROXIES') || define('TRUSTED_PROXIES', '');
 
 /** true = Fehler im Klartext ausgeben (nur lokal!). */
 defined('APP_DEBUG') || define('APP_DEBUG', false);

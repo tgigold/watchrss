@@ -162,7 +162,8 @@ Die wichtigsten Werte:
 
 | Konstante | Standard | Bedeutung |
 |---|---|---|
-| `APP_BASE_URL` | `''` | Öffentliche Basis-URL. Leer = aus dem Request ableiten. **Für korrekte Links im Feed setzen.** |
+| `APP_BASE_URL` | `''` | Öffentliche Basis-URL, z. B. `https://watchrss.de`. **Pflicht im Betrieb** (in `config.inc.php`): Links und HTTPS-Redirect nutzen nur diese Adresse, nie den Host-Header. Leer nur lokal erlaubt (`localhost`, `*.test`, …) |
+| `TRUSTED_PROXIES` | `''` | Reverse-Proxys (IPs/CIDR, kommagetrennt), deren `X-Forwarded-For`/`-Proto` übernommen wird. Leer = keine |
 | `APP_DEBUG` | `false` | Fehler im Klartext ausgeben (nur lokal) |
 | `CHANNEL_REFRESH_SECONDS` | `1800` | Mindestabstand zwischen zwei Abrufen desselben Kanals |
 | `FETCH_BATCH_SIZE` | `40` | Kanäle pro Cron-Lauf |
@@ -387,7 +388,34 @@ Vorbereitet, aber noch nicht aktiv: die Tabelle `users` und `feeds.user_id`.
 Ein späteres Login braucht damit keinen Schema-Umbau – nur eine `Auth`-Klasse,
 zwei Routen und eine Prüfung in `PageController::edit()`.
 
-Weitere Maßnahmen: PDO mit echten Prepared Statements, `htmlspecialchars` in
+### HTTP-Header und HTTPS
+
+Jede Antwort trägt eine strikte Content Security Policy (nur eigene Skripte
+und Styles, Bilder zusätzlich von den YouTube-CDNs, `object-src 'none'`,
+`frame-ancestors 'none'`), `X-Frame-Options: DENY`,
+`X-Content-Type-Options: nosniff` und
+`Referrer-Policy: strict-origin-when-cross-origin` – fremde Server sehen
+also nie den Pfad mit dem Editor-Token. Über HTTPS kommt HSTS dazu.
+
+Ist `APP_BASE_URL` eine `https://`-Adresse, leitet die App unverschlüsselte
+Aufrufe dorthin um (GET: 301, sonst 308). In `www/.htaccess` liegt eine
+vorbereitete, auskommentierte Regel für dasselbe auf Webserver-Ebene.
+
+`X-Forwarded-For` und `X-Forwarded-Proto` zählen nur, wenn der Request von
+einer Adresse aus `TRUSTED_PROXIES` kommt. Sonst könnte jeder Client sich per
+Header eine andere IP geben und die Abrufbremsen umgehen.
+
+### Verzeichnisschutz
+
+Neben `www/` liegt alles andere außerhalb des Document-Roots. Als zweite
+Sicherung tragen `bin/`, `src/`, `templates/`, `var/` und `vendor/` (beim
+Deploy erzeugt) je eine `.htaccess` mit `Require all denied` – das greift auch,
+wenn das Document-Root versehentlich auf den Projektstamm zeigt. Die
+`.htaccess` im Projektstamm sperrt zusätzlich einzelne Dateien.
+
+### Weitere Maßnahmen
+
+PDO mit echten Prepared Statements, `htmlspecialchars` in
 allen Templates (`$this->e()`), XML-Erzeugung über `XMLWriter` statt
 String-Konkatenation, `LIBXML_NONET` beim Parsen (kein XXE), Host-Whitelist
 beim Abrufen fremder URLs und IP-Adressen nur gehasht im Cache.

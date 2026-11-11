@@ -30,8 +30,14 @@ define('CRON_TOKEN', '');
  */
 define('TRACKING_SALT', '');
 
+/**
+ * Öffentliche Basis-URL ohne abschließenden Slash. Pflicht im Betrieb:
+ * Links und HTTPS-Redirect nutzen nur diese Adresse.
+ */
+define('APP_BASE_URL', 'https://example.org');
+
 /* Optionale Overrides für config.app.inc.php, z. B.: */
-// define('APP_BASE_URL', 'https://example.org');
+// define('TRUSTED_PROXIES', '10.0.0.0/8');
 // define('MATOMO_ENABLED', true);
 // define('MATOMO_URL', 'https://analytics.example.org/matomo.php');
 // define('MATOMO_SITE_ID', 1);

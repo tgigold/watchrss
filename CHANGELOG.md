@@ -19,6 +19,14 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
 - `ext-libxml` und `ext-xmlwriter` als Abhängigkeiten in `composer.json`.
 - Klare Fehlermeldung, wenn `config.inc.php` fehlt.
 - Dieses Changelog.
+- Security-Header auf jeder Antwort: Content Security Policy,
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, über HTTPS
+  zusätzlich HSTS.
+- HTTPS-Redirect auf `APP_BASE_URL` in der App; vorbereitete Regel in
+  `www/.htaccess`.
+- `TRUSTED_PROXIES`: Liste vertrauenswürdiger Reverse-Proxys.
+- `.htaccess` mit Zugriffssperre in `bin/`, `src/`, `templates/`, `var/` und
+  (beim Deploy) `vendor/`.
 
 ### Geändert
 
@@ -28,6 +36,17 @@ die Versionierung folgt [Semantic Versioning](https://semver.org/lang/de/).
   (`Unlicense`).
 - README: Installation mit `config.inc.sample.php`, neuer Abschnitt
   „Deployment“.
+- **`APP_BASE_URL` ist im Betrieb Pflicht.** Ohne sie antwortet die App außer
+  bei lokalen Hosts mit einem Fehler, statt Links aus dem Host-Header zu
+  bauen.
+
+### Sicherheit
+
+- `X-Forwarded-For` und `X-Forwarded-Proto` werden nur noch von Proxys aus
+  `TRUSTED_PROXIES` übernommen. Bisher konnte jeder Client damit eine
+  beliebige IP vortäuschen und die Abrufbremsen umgehen.
+- Feed-, Editor- und API-Links werden nicht mehr aus dem `Host`-Header
+  gebaut.
 
 ### Entfernt
 

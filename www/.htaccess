@@ -6,6 +6,13 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # HTTPS erzwingen. Die App leitet ohnehin auf APP_BASE_URL um; diese
+    # Regel spart den PHP-Aufruf. Bewusst mit fester Domain statt
+    # %{HTTP_HOST}, damit kein Client das Ziel bestimmt - Domain anpassen
+    # und die beiden Zeilen aktivieren:
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^ https://example.org%{REQUEST_URI} [R=301,L]
+
     # Bestehende Dateien (CSS/JS) direkt ausliefern ...
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d

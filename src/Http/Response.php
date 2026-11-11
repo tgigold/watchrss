@@ -61,6 +61,16 @@ final class Response
         return new self('', 304, $headers);
     }
 
+    /**
+     * Ergänzt Header, die die Antwort noch nicht selbst setzt.
+     *
+     * @param array<string,string> $headers
+     */
+    public function withDefaultHeaders(array $headers): self
+    {
+        return new self($this->body, $this->status, $this->headers + $headers);
+    }
+
     public function send(): void
     {
         if (!headers_sent()) {
